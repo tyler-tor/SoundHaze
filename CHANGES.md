@@ -199,3 +199,13 @@ _Done first (as the plan's "Recommended order" says) so the frontend could be bu
   - Counters live in memory: they reset on restart and are not shared between multiple server processes. For more than one server, use a shared store (e.g. Redis).
   - Revisit options when upgrading helmet (S17).
 
+## S10 — Let users comment on any song
+- **Problem:** `POST /api/songs/:songId/comments` looked the song up with `where: { id: songId, userId: user.id }`, so you could only comment on **your own** songs; on anyone else's song you got "Song couldn't be found." A logic bug (copied from the delete route).
+- **What changed:** The lookup is now `Song.findByPk(songId)`. Any logged-in user can comment on any existing song. Editing/deleting a comment is still limited to its author (unchanged, in `comment.js`).
+- **Files:** `backend/routes/api/songs.js`
+- **How to verify** (verified with curl):
+  - As the demo user, `POST /api/songs/1/comments` (song 1 belongs to user 2) with `{"body":"Great track!"}` → `200` with the new comment (`userId: 1`, `songId: 1`).
+  - `POST /api/songs/999/comments` → `404 "Song couldn't be found."`.
+  - Logged out → `401`.
+- **Things to watch / follow-ups:** There is still no comments UI in the frontend; S34 adds one.
+

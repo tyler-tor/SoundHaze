@@ -89,12 +89,8 @@ router.post('/:songId/comments', requireAuth, validateComment, async(req, res, n
     const { user } = req;
     const { body } = req.body
 
-    const song = await Song.findOne({
-        where: {
-            id: songId,
-            userId: user.id
-        }
-    })
+    // Any logged-in user can comment on any song (not just their own).
+    const song = await Song.findByPk(songId);
 
     if(song){
         const comment = await Comment.create({
