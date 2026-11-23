@@ -45,7 +45,8 @@ router.post('/signup', singleMulterUpload('image'), validateSignup, async(req, r
         const profileImageUrl = await singlePublicFileUpload(req.file);
         const user = await User.signup({ email, username, password, profileImageUrl, firstName, lastName });
 
-        user.dataValues.token = await setTokenCookie(res, user);
+        // Token goes only in the httpOnly cookie, never in the JSON body.
+        setTokenCookie(res, user);
 
         return res.json(
             user

@@ -31,7 +31,9 @@ router.post('/login', validateLogin, async (req, res, next) => {
         return next(err);
     }
 
-    user.dataValues.token = await setTokenCookie(res, user);
+    // The JWT lives only in the httpOnly `token` cookie. Never put it in the
+    // JSON body, or JavaScript (and any XSS) could read it.
+    setTokenCookie(res, user);
 
     return res.json(user)
 });

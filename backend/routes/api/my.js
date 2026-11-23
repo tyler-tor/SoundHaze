@@ -1,5 +1,5 @@
 const express = require('express');
-const { setTokenCookie, restoreUser, requireAuth } = require('../../utils/auth');
+const { restoreUser, requireAuth } = require('../../utils/auth');
 const { User, Song, Album, Playlist, PlaylistSong } = require('../../db/models');
 const { check } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
@@ -52,8 +52,10 @@ router.get('/songs', requireAuth, async(req, res, next) => {
 router.get('/', restoreUser, async (req, res) => {
     const { user } = req;
     if(user) {
+        // Read-only: this no longer re-issues the token cookie on every call
+        // (no "sliding session"). The session lasts JWT_EXPIRES_IN seconds
+        // from login/signup, and the token is never sent in the JSON body.
         const currUser = await User.getCurrentUserById(user.id);
-        currUser.dataValues.Token = await setTokenCookie(res, currUser)
         return res.json({
             currUser
         })
