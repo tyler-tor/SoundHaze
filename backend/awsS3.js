@@ -1,18 +1,22 @@
-const AWS = require("aws-sdk");
+const { S3Client } = require("@aws-sdk/client-s3");
+const { Upload } = require("@aws-sdk/lib-storage");
 const crypto = require("crypto");
 const path = require("path");
 const multer = require("multer");
+const { s3: s3Config } = require("./config");
 
-// name of your bucket here
-const NAME_OF_BUCKET = "soundcloud-bucket";
-
-//  make sure to set environment variables in production for:
-//  AWS_ACCESS_KEY_ID
-//  AWS_SECRET_ACCESS_KEY
-//  and aws will automatically use those environment variables
-//  (S18 moves this to AWS SDK v3 with an IAM role and no access keys.)
-
-const s3 = new AWS.S3({ apiVersion: "2006-03-01" });
+// AWS SDK v3. Settings come from env vars (see config/index.js):
+//   S3_BUCKET       bucket for uploads            (default "soundcloud-bucket")
+//   AWS_REGION      the bucket's region           (default "us-west-2")
+//   MEDIA_BASE_URL  public URL prefix for uploads (default: the bucket's
+//                   S3 URL; later a CloudFront URL such as https://xyz.cloudfront.net/media)
+//
+// Credentials: none are configured here. The SDK finds them by itself
+// (its "default credential provider chain"): on EC2 from the instance's IAM
+// role, locally from `aws configure` / AWS_PROFILE, or from
+// AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY if those env vars are set.
+// Never put access keys in the repo.
+const s3 = new S3Client({ region: s3Config.region });
 
 // --------------------------- Upload rules ------------------------
 // Files are held in memory (multer memoryStorage) before going to S3, so
@@ -56,58 +60,34 @@ const makeKey = (originalname, mimetype) =>
 // from a bucket policy / CloudFront instead (S43).
 const uploadToS3 = async (file) => {
   if (!file) throw httpError(400, "A file is required.");
-  const { originalname, mimetype, buffer } = await file;
-  const uploadParams = {
-    Bucket: NAME_OF_BUCKET,
-    Key: makeKey(originalname, mimetype),
-    Body: buffer,
-    ContentType: mimetype,
-  };
-  return s3.upload(uploadParams).promise();
+  const { originalname, mimetype, buffer } = file;
+  const key = makeKey(originalname, mimetype);
+  // lib-storage's Upload switches to a multipart upload for large files.
+  await new Upload({
+    client: s3,
+    params: {
+      Bucket: s3Config.bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: mimetype,
+    },
+  }).done();
+  return key;
 };
+
+// Public URL for an object key, e.g. https://<bucket>.s3.<region>.amazonaws.com/audio/<uuid>.mp3
+const publicUrlFor = (key) =>
+  `${s3Config.mediaBaseUrl}/${key.split("/").map(encodeURIComponent).join("/")}`;
 
 // --------------------------- Public UPLOAD ------------------------
 
-const singlePublicFileUpload = async (file) => {
-  const result = await uploadToS3(file);
-  // save the URL of the file in your database
-  return result.Location;
-};
+// Uploads one multer file and returns the URL to save in the database.
+const singlePublicFileUpload = async (file) => publicUrlFor(await uploadToS3(file));
 
-const multiplePublicFileUpload = async (files) => {
-  return await Promise.all(
-    files.map((file) => {
-      return singlePublicFileUpload(file);
-    })
-  );
-};
+const multiplePublicFileUpload = async (files) =>
+  Promise.all(files.map((file) => singlePublicFileUpload(file)));
 
-// --------------------------- Private UPLOAD ------------------------
-
-const singlePrivateFileUpload = async (file) => {
-  const result = await uploadToS3(file);
-  // save the key of the file in your database to retrieve for later
-  return result.Key;
-};
-
-const multiplePrivateFileUpload = async (files) => {
-  return await Promise.all(
-    files.map((file) => {
-      return singlePrivateFileUpload(file);
-    })
-  );
-};
-
-const retrievePrivateFile = (key) => {
-  let fileUrl;
-  if (key) {
-    fileUrl = s3.getSignedUrl("getObject", {
-      Bucket: NAME_OF_BUCKET,
-      Key: key,
-    });
-  }
-  return fileUrl || key;
-};
+// (The unused "private upload" helpers and signed-URL helper were removed in S18.)
 
 // --------------------------- Storage ------------------------
 
@@ -152,11 +132,9 @@ const multipleMulterUpload = (nameOfKey, kind = "image") =>
 module.exports = {
   s3,
   UPLOAD_RULES,
+  publicUrlFor,
   singlePublicFileUpload,
   multiplePublicFileUpload,
-  singlePrivateFileUpload,
-  multiplePrivateFileUpload,
-  retrievePrivateFile,
   singleMulterUpload,
   multipleMulterUpload,
 };

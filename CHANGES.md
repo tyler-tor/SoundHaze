@@ -366,3 +366,26 @@ _New item (not in the original plan), done first at Tyler's request._
 - **Things to watch / follow-ups:**
   - `upgrade-insecure-requests` tells browsers to load `http://` images/audio over `https://`. All seed media is `https://` already; a media URL that only works over plain HTTP would break in the Express-served build.
   - The CSP still only matters for pages Express serves (production mode). Once the frontend lives on S3/CloudFront, set the CSP there (S43).
+
+## S18 — AWS SDK v2 to v3, with config from env vars and no access keys
+- **Problem:** `aws-sdk` v2 reached end of support in September 2025 and is one huge package. The bucket name was hard-coded (`"soundcloud-bucket"`), the URL saved in the database was whatever S3 returned (so it could not point at CloudFront later), and the comments told you to put access keys in env vars. There were also unused "private upload" and signed-URL helpers.
+- **What changed:**
+  - `aws-sdk` removed; `@aws-sdk/client-s3` and `@aws-sdk/lib-storage` added. `awsS3.js` creates one `S3Client` and uploads with lib-storage's `Upload` (which automatically switches to a multipart upload for big files).
+  - New settings in `config/index.js` (`config.s3`), all optional:
+    - `S3_BUCKET` (default `soundcloud-bucket`)
+    - `AWS_REGION` (default `us-west-2`)
+    - `MEDIA_BASE_URL` (default `https://<bucket>.s3.<region>.amazonaws.com`): the prefix of the URL saved in the database for each upload. Later this becomes the CloudFront address, e.g. `https://xxxx.cloudfront.net/media`.
+  - The saved URL is now `MEDIA_BASE_URL + "/" + key` (for example `.../audio/<uuid>.mp3`), built by the new `publicUrlFor(key)`.
+  - **No access keys in code or config.** The SDK's default credential chain finds credentials itself: the EC2 instance's IAM role in production, `aws configure`/`AWS_PROFILE` on your laptop, or `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` if you still set them.
+  - Removed `singlePrivateFileUpload`, `multiplePrivateFileUpload` and `retrievePrivateFile` (never used). The S8 upload rules (sizes, types, UUID keys, no ACL, `ContentType`) are unchanged.
+- **Files:** `backend/awsS3.js`, `backend/config/index.js`, `backend/package.json`, `backend/package-lock.json`
+- **How to verify** (verified with a stubbed S3 client, since this sandbox has no AWS access):
+  - Stubbing `s3.send` and uploading `My Song.MP3` → one `PutObjectCommand` with `Bucket: "soundcloud-bucket"`, `Key: "audio/<uuid>.mp3"`, `ContentType: "audio/mpeg"`, no ACL; returned URL `https://soundcloud-bucket.s3.us-west-2.amazonaws.com/audio/<uuid>.mp3`.
+  - With `MEDIA_BASE_URL=https://d123.cloudfront.net/media/` → `https://d123.cloudfront.net/media/images/<uuid>.png` (trailing slash handled).
+  - `S3_BUCKET=other AWS_REGION=us-east-1` → base URL `https://other.s3.us-east-1.amazonaws.com`.
+  - Running server without credentials: a valid upload passes all checks and fails with "Could not load credentials from any providers" (500), as expected. All other curl checks pass.
+  - **Still to test with your real bucket:** upload a song and an image from the UI with your AWS profile (`AWS_PROFILE=... npm run dev`).
+- **Things to watch / follow-ups:**
+  - `AWS_REGION` is now read by our config as well as by the SDK. If your bucket is not in `us-west-2`, set it.
+  - When CloudFront serves uploads under `/media/*` (S43), `MEDIA_BASE_URL` must be set to that prefix and CloudFront's origin path must strip `/media`, otherwise new URLs 404. Existing database rows keep their old full S3 URLs.
+  - The seed data still uses hard-coded `https://soundcloud-bucket...` URLs (building them from `MEDIA_BASE_URL` is S37).
