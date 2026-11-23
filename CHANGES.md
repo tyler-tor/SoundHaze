@@ -13,10 +13,16 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S9 (separate counters):** login and signup each have their **own** 10/min counter, so failed logins do not block signups (and vice versa).
 - **S11 (frontend):** the plan lists `frontend/src/store/songs.js` as "later". Because the API now returns 20 songs by default and there are 100 seed songs, the Songs page and the song detail page (which looks songs up in the full list) would have lost songs. So `getSongs()` in the store now fetches page after page (100 per page) until it has them all. The UI behaves exactly as before; real paginated UI ("Load more") can come with the UI items (S33/S34).
 - **S11 (invalid params):** instead of silently clamping bad values (the old code turned `page=-1` into `0`), invalid `page`/`size`/`createdAt` now return `400` with a clear message. Maximum `size` is 100.
+- **S12 (more files than named):** the plan named the `.then(() => ..., history.push(...))` bug in `CreateSong` only. The exact same bug was in `UpdateSong`, `UpdateAlbum` and `CreateAlbum`, and a related one (`.then(dispatch(...))` plus reading the id from an empty Redux slice) in `DeleteAlbum`/`DeletePlaylist`, so those were fixed in the same commit.
+- **Order of commits:** S13 was committed first (the plan's "Recommended order" says to do it first), then S1 to S12 in number order.
 
 ## Open questions for Tyler
 
-_None yet._
+1. **`GET /api/playlists` is now public (S2).** I treated the `/playlists` page as a public "browse all playlists" page, like `/albums`. If you meant it to show only *your* playlists, say so and it can call `GET /api/my/playlists` instead.
+2. **S3 bucket public access (S8).** Uploads no longer set `ACL: public-read`. Does `soundcloud-bucket` still exist, and does it have a bucket policy that allows public `s3:GetObject`? If it relied on per-object ACLs, newly uploaded songs/images will return 403 until a bucket policy (or CloudFront, S43) is in place.
+3. **Sliding sessions (S5).** `GET /api/my` no longer renews the login cookie, so users are logged out `JWT_EXPIRES_IN` seconds after logging in, even if active. OK, or do you want it to renew (without putting the token in the body)?
+4. **Rate limit numbers (S9).** 10 requests/minute per IP for login and for signup. Good, or higher/lower?
+5. **Default avatar (S7).** A plain grey silhouette (`frontend/public/default-avatar.svg`). Want a different image? Set `DEFAULT_AVATAR_URL` or replace the file.
 
 ---
 
