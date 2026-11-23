@@ -125,9 +125,11 @@ module.exports = (sequelize, DataTypes) => {
       loginUser: {
         attributes: {}
       },
+      // Public profile fields only. Never include email here: this scope is
+      // used by public endpoints (artists, album/song/playlist details).
       includedArtist: {
         attributes: {
-          exclude: ['updatedAt', 'createdAt', 'hashedPassword']
+          exclude: ['updatedAt', 'createdAt', 'hashedPassword', 'email']
         }
       },
       includedInComment: {

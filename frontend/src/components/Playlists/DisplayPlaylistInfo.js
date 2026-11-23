@@ -58,9 +58,6 @@ function DisplayPlaylistInfo() {
                             <strong className="ind-pi-item">
                                 {playlist.User.username}
                             </strong>
-                            <strong className="ind-pi-item">
-                                {playlist.User.email}
-                            </strong>
                         </div>
                         {checkValidation(playlist)}
                     </div>

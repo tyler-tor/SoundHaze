@@ -83,9 +83,6 @@ const DisplayAlbumInfo = () => {
                             <strong className="ind-ai-item">
                                 {album.Artist.username}
                             </strong>
-                            <strong className="ind-ai-item">
-                            {album.Artist.email}
-                            </strong>
                         </div>
                         {checkValidation(album)}
                     </div>

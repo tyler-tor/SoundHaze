@@ -7,6 +7,7 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 
 - **S3 (song fields):** the plan's allow-list for songs was `title`, `description`. I also allowed `previewImage`, because the existing Update Song form lets the owner change the song's cover image and leaving it out would silently break that feature.
 - **S3 (album/playlist image field name):** the frontend sends the new image as `imageUrl` (the create routes use that name too), not `previewImage`. The update routes now accept `imageUrl` as an alias that is saved into `previewImage`. Side effect: changing an album/playlist image from the edit form now actually works (before, the `...album` spread in the form re-sent the **old** `previewImage`, and `imageUrl` was ignored because there is no such column).
+- **S6 (album page):** the plan only named the playlist page, but the album detail page (`DisplayAlbumInfo.js`) also printed the artist's email. Removed it there too (it would have rendered empty after the API change anyway).
 
 ## Open questions for Tyler
 
@@ -118,4 +119,17 @@ _Done first (as the plan's "Recommended order" says) so the frontend could be bu
   - `curl -i -b <cookie jar> /api/my`: JSON has no `Token`, and there is no `Set-Cookie` header.
   - The frontend never read `token`/`Token` (checked with grep), so the UI is unaffected; login and page refresh keep you logged in through the cookie.
 - **Things to watch / follow-ups:** If you would rather have a sliding session (stay logged in while active), re-add `setTokenCookie(res, currUser)` in `GET /api/my` but **without** putting the token in the body. jsonwebtoken 8 → 9 is S15.
+
+## S6 — Stop exposing users' emails publicly
+- **Problem:** The Sequelize scope `includedArtist` (used by public, no-login endpoints) returned the user's `email`. Confirmed: `GET /api/artists/2` showed `loslonleyboys@user.io`. The same scope feeds `GET /api/artists`, `GET /api/songs/:id`, `GET /api/albums/:id` and `GET /api/playlists/:id`, so anyone could scrape every user's email. The playlist and album detail pages also printed the owner's email on screen.
+- **What changed:**
+  - `email` added to the excluded attributes of the `includedArtist` scope in the User model.
+  - Removed the `{playlist.User.email}` line from the playlist page and the `{album.Artist.email}` line from the album page.
+  - Your **own** email is still returned by `GET /api/my` and login/signup (the `currentUser` scope), and still shown on your own home page. That is fine because only you see it.
+- **Files:** `backend/db/models/user.js`, `frontend/src/components/Playlists/DisplayPlaylistInfo.js`, `frontend/src/components/Albums/DisplayAlbumInfo.js`
+- **How to verify** (verified with curl, logged out):
+  - `curl http://localhost:5000/api/artists/2 | grep @` → no match (before the fix: 1 match).
+  - Same for `/api/artists`, `/api/songs/1`, `/api/albums/1`, `/api/playlists/1`.
+  - In the UI, open any album or playlist page: only the avatar and username are shown.
+- **Things to watch / follow-ups:** The `currentUser` scope still includes email. It is used by `artist.js` routes only to look up the user before listing songs/albums/playlists (the user object itself is not returned), so nothing leaks today. If a future route returns that object directly, use `includedArtist` instead.
 
