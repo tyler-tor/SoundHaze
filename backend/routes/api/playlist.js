@@ -4,6 +4,7 @@ const { Song, User, Album, Playlist, Comment, PlaylistSong } = require('../../db
 const { check } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
 const { requireOwner } = require('../../utils/ownership');
+const { pick } = require('../../utils/pick');
 
 const router = express.Router();
 
@@ -124,7 +125,10 @@ router.put('/:playlistId', requireAuth, validatePlaylist, async(req, res, next) 
     });
 
     if(playlist){
-        await playlist.update({...req.body});
+        // `imageUrl` is what the frontend sends (same as the create route).
+        const updates = pick(req.body, ['name', 'previewImage']);
+        if (req.body.imageUrl !== undefined) updates.previewImage = req.body.imageUrl;
+        await playlist.update(updates);
         return res.json(playlist)
     }else{
         playlistCouldNotBeFound(next)

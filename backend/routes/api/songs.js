@@ -4,6 +4,7 @@ const { Song, User, Album, Comment } = require('../../db/models');
 const { check, query, condition } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
 const { requireOwner } = require('../../utils/ownership');
+const { pick } = require('../../utils/pick');
 const app = require('../../app');
 const song = require('../../db/models/song');
 
@@ -98,7 +99,9 @@ router.get('/:songId/comments', async(req, res, next) => {
 router.put('/:songId', requireAuth, requireOwner(Song, 'songId'), async (req, res, next) => {
     const song = res.locals.record;
 
-    await song.update({...req.body});
+    // Only these fields can be edited. previewImage is included because the
+    // Update Song form lets the owner change the cover image.
+    await song.update(pick(req.body, ['title', 'description', 'previewImage']));
     return res.json(song)
 })
 

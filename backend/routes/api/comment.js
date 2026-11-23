@@ -3,6 +3,7 @@ const { setTokenCookie, requireAuth, restoreUser } = require('../../utils/auth')
 const { Song, User, Album, Comment } = require('../../db/models');
 const { check } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
+const { pick } = require('../../utils/pick');
 const app = require('../../app');
 
 const router = express.Router();
@@ -33,7 +34,7 @@ router.put('/:commentId', requireAuth, validateComment, async(req, res, next) =>
     })
 
     if(comment){
-        await comment.update({...req.body});
+        await comment.update(pick(req.body, ['body']));
 
         return res.json(comment)
     }else{

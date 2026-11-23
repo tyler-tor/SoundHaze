@@ -7,6 +7,7 @@ const app = require('../../app');
 const user = require('../../db/models/user');
 const {singlePublicFileUpload, singleMulterUpload} = require('../../awsS3')
 const { requireOwner } = require('../../utils/ownership');
+const { pick } = require('../../utils/pick');
 
 const router = express.Router();
 
@@ -80,7 +81,11 @@ router.get('/:albumId', async(req, res, next) => {
 router.put('/:albumId', [requireAuth, requireOwner(Album, 'albumId'), validateAlbum], async(req, res, next) => {
     const album = res.locals.record;
 
-    await album.update({...req.body});
+    // The frontend sends the new image as `imageUrl` (same name the create
+    // route uses), so accept it as an alias for previewImage.
+    const updates = pick(req.body, ['title', 'description', 'previewImage']);
+    if (req.body.imageUrl !== undefined) updates.previewImage = req.body.imageUrl;
+    await album.update(updates);
 
     return res.json(album)
 });
