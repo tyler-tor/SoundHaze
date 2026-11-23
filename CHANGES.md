@@ -36,6 +36,8 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S21 (test packages removed):** `@testing-library/*` were removed together with `react-scripts`, because `react-scripts test` was their only runner and there are no test files. Frontend tests come back with Vitest in S48. `"type": "module"` was added to `frontend/package.json` (Vite's config is ESM).
 - **S21 (backend path):** the backend's production static-file path changed from `frontend/build` to `frontend/dist` in `backend/routes/index.js` (needed so `NODE_ENV=production` keeps serving the app until S38 removes that code).
 - **S23 (before S48):** S48 (frontend tests) is listed as a prerequisite and is not in this batch. Instead, the built app was exercised in jsdom with a scripted tour (see S23). Lazy-loading routes with `React.lazy` (optional in the plan) was **not** done: the whole bundle is 88 KB gzipped, so splitting buys little.
+- **S24 (scope):** only the required part was done: `configureStore` replaces `createStore` + thunk + logger. Converting each `store/*.js` file to `createSlice` (optional, "one file per follow-up commit" in the plan) and moving to React 19 (optional) were **not** done, to keep one commit per item and avoid an unverified React 19 jump (`react-h5-audio-player` compatibility is untested). `react-redux` was upgraded 8 → 9 (the version made for RTK 2 / Redux 5).
+- **S24 (extra fix):** the albums reducer's `SHOW_ALBUM` case mutated the previous state (and crashed if `currentAlbum` was `null`). RTK's development check throws on mutations, so it was fixed in the same commit.
 
 ## Open questions for Tyler
 
@@ -493,3 +495,20 @@ _New item (not in the original plan), done first at Tyler's request._
 - **Things to watch / follow-ups:**
   - In v7, `navigate()` must be called from event handlers or effects, never during render (use `<Navigate>` there), which is how the code is written now.
   - Route pages could later be lazy-loaded with `React.lazy` if the bundle grows.
+
+## S24 — Redux to Redux Toolkit
+- **Problem:** `createStore` is deprecated, and the store was wired by hand (`applyMiddleware(thunk)`, `compose` with the DevTools extension, `redux-logger` in development).
+- **What changed:**
+  - Added `@reduxjs/toolkit` 2.15; upgraded `react-redux` 8 → 9.3. Removed `redux`, `redux-thunk` and `redux-logger` (RTK includes Redux and thunk).
+  - `store/index.js` now calls RTK's `configureStore({ reducer, preloadedState, devTools: import.meta.env.DEV })`. Thunk middleware is built in, so every existing async action creator (`getSongs()`, `loginUser()`, ...) works unchanged. Redux DevTools works automatically in development. In development RTK also checks that reducers never mutate state and that state/actions are serializable.
+  - The `configureStore()` export used by `src/index.jsx` keeps the same name and signature.
+  - `store/albums.js` `SHOW_ALBUM`: now copies `currentAlbum` instead of writing into the old state object (a real mutation bug that RTK's dev check would throw on, and a crash when `currentAlbum` was `null` after creating an album).
+  - `store/artists.js`: removed an unused `import { bindActionCreators } from "redux"` (the `redux` package is no longer a direct dependency).
+- **Files:** `frontend/src/store/index.js`, `frontend/src/store/albums.js`, `frontend/src/store/artists.js`, `frontend/package.json`, `frontend/package-lock.json`
+- **How to verify** (verified):
+  - `npm run build` succeeds (84.8 KB gzipped JS, down from 88.5 KB).
+  - jsdom tour on the **production** build and on a **development** build (`NODE_ENV=development vite build --mode development`, where RTK's mutation/serializability checks are active): all pages and interactions from S23 work with **0 errors and 0 warnings**, including `/albums/1` (which dispatches `SHOW_ALBUM`). In the dev build `window.store.getState()` has the same slices as before: `session, songs, albums, player, artists, playlists`.
+- **Things to watch / follow-ups:**
+  - Action logs no longer print in the browser console (redux-logger is gone). Install the **Redux DevTools** browser extension to see actions and state.
+  - If a future reducer mutates state, the dev server will throw "A state mutation was detected..."; that is RTK catching a real bug.
+  - Next steps (not done): convert the store files to `createSlice` one at a time, then move to React 19.

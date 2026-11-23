@@ -1,4 +1,3 @@
-import { bindActionCreators } from "redux";
 import { csrfFetch } from "./csrf";
 
 const GET_ARTISTS = 'users/GET_ARTISTS';

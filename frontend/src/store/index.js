@@ -1,6 +1,15 @@
-import { createStore, combineReducers, applyMiddleware, compose } from 'redux';
-import thunk from 'redux-thunk';
-import logger from 'redux-logger';
+// frontend/src/store/index.js
+//
+// Redux Toolkit store (S24). configureStore replaces the old createStore +
+// applyMiddleware + compose setup:
+//   - thunk middleware is included by default (our async action creators
+//     such as getSongs() keep working unchanged);
+//   - the Redux DevTools browser extension is enabled automatically in
+//     development and off in production builds;
+//   - in development it also checks that reducers never mutate state and
+//     that state/actions are serializable, and warns in the console if not.
+// redux-logger is gone: use the Redux DevTools extension instead.
+import { configureStore as configureRtkStore } from '@reduxjs/toolkit';
 import sessionReducer from './session';
 import songsReducer from './songs';
 import albumsReducer from './albums';
@@ -8,29 +17,20 @@ import playerReducer from './player';
 import artistsReducer from './artists';
 import playlistsReducer from './playlists';
 
-let enhancer;
-
-// import.meta.env.PROD / DEV replace process.env.NODE_ENV under Vite (S21).
-if (import.meta.env.PROD) {
-  enhancer = applyMiddleware(thunk);
-} else {
-  const composeEnhancers =
-    window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
-  enhancer = composeEnhancers(applyMiddleware(thunk, logger));
-}
-
-const rootReducer = combineReducers({
+const reducer = {
   session: sessionReducer,
   songs: songsReducer,
   albums: albumsReducer,
   player: playerReducer,
   artists: artistsReducer,
   playlists: playlistsReducer
-});
+};
 
+const configureStore = (preloadedState) =>
+  configureRtkStore({
+    reducer,
+    preloadedState,
+    devTools: import.meta.env.DEV
+  });
 
-const configureStore = (preloadedState) => {
-    return createStore(rootReducer, preloadedState, enhancer);
-  };
-
-  export default configureStore;
+export default configureStore;

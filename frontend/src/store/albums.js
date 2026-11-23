@@ -129,8 +129,13 @@ const albumsReducer = (state = initAlbumData, action) => {
             delete newState.albums[action.albumId];
             return newState;
         case (SHOW_ALBUM):
-            newState = {...state};
-            newState.currentAlbum[action.album.id] = action.album;
+            // Copy currentAlbum instead of changing it in place: the old code
+            // mutated the previous state (Redux Toolkit's dev check throws on
+            // that) and crashed when currentAlbum was null after CREATE_ALBUM.
+            newState = {
+                ...state,
+                currentAlbum: { ...(state.currentAlbum || {}), [action.album.id]: action.album }
+            };
             return newState;
         default:
             return state;
