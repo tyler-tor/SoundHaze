@@ -341,3 +341,15 @@ _New item (not in the original plan), done first at Tyler's request._
 - **Things to watch / follow-ups:**
   - Values like `7d` used to "work" for the JWT part only by accident (and broke the cookie's `maxAge`). Use seconds, e.g. `JWT_EXPIRES_IN=604800`.
   - Existing login cookies stay valid across the upgrade (same algorithm and secret).
+
+## S16 — express-validator 6 to 7, and multer 1 to 2
+- **Problem:** `multer` 1.x has denial-of-service advisories (malformed multipart requests could crash or hang the server). `express-validator` 6 is no longer maintained.
+- **What changed:**
+  - `express-validator` `^6.14.2` → `^7.3.2`, `multer` `^1.4.5-lts.1` → `^2.5.0`.
+  - No code changes were needed for the upgrade itself: the validators only use `check()`/`query()` chains (`exists`, `isString`, `trim`, `notEmpty`, `isLength`, `isInt`, `toInt`, `isISO8601`, `optional`, `withMessage`), which work the same in v7, and `handleValidationErrors` only reads `error.msg` (v7 renamed `error.param` to `error.path`, which we do not use). multer 2 keeps the same API (`memoryStorage`, `limits`, `fileFilter`, `MulterError` codes).
+  - One `.withMessage` placement fix (the plan's warning): the login validator had `.exists().notEmpty().withMessage(...)`, so an empty credential produced an extra generic "Invalid value" message from `exists()`. It is now `.exists({ checkFalsy: true }).withMessage(...)`.
+- **Files:** `backend/routes/api/session.js`, `backend/package.json`, `backend/package-lock.json`
+- **How to verify** (verified with curl; same results as Batch 1):
+  - Validation: empty/whitespace/31-char playlist name, empty comment, `songId: "abc"`, `?page=0`, `?size=101`, `?createdAt=notadate`, empty album description → `400` with the same messages as before. `?page=2&size=5` → ids 6 to 10 (`page`/`size` are numbers, so `toInt()` still works). Empty login → `["Please provide a valid email or username.", "Please provide a password."]`.
+  - Uploads: no file → `400`, `.txt` → `415`, 6 MB PNG → `413`, small PNG reaches the S3 call (fails only for lack of AWS credentials), signup without image → `200`, signup with `.txt` → `415`, PNG as a song → `415`, no audio → `400`.
+- **Things to watch / follow-ups:** Several chains start with `.isString()` without a message, so sending a number instead of a string shows "Invalid value". Harmless (pre-existing); messages can be added in the lint/tests items.
