@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "sequelize": "sequelize",
-    "sequelize-cli": "sequleize-cli",
+    "sequelize-cli": "sequelize-cli",
     "start": "per-env",
     "start:development": "nodemon ./bin/www",
     "start:production": "node ./bin/www",
@@ -38,5 +38,8 @@
     "dotenv-cli": "^5.1.0",
     "nodemon": "^2.0.18",
     "sqlite3": "^5.0.8"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
