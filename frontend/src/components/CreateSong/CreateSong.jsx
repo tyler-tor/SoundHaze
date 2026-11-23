@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector} from "react-redux";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { createAddSong } from "../../store/songs";
 import './createsong.css';
 import { getErrorMessages } from "../../store/csrf";
 
 const CreateSong = ({ albumId, setShowModal }) => {
     const dispatch = useDispatch();
-    const history = useHistory();
+    const navigate = useNavigate();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [audioUrl, setAudioUrl] = useState('');
@@ -34,7 +34,7 @@ const CreateSong = ({ albumId, setShowModal }) => {
                 setAudioUrl("");
                 setDescription("");
                 setShowModal(false);
-                history.push('/songs');
+                navigate('/songs');
             } catch (response) {
                 setErrors(await getErrorMessages(response));
             }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Redirect } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { signUpUser } from '../../store/session';
 // import ImageComponent from '../ImageComponent';
 import './SignupForm.css'
@@ -68,7 +68,7 @@ const SignupFormPage = () => {
     }
 
     if (currentUser) return (
-        <Redirect to='/' />
+        <Navigate to='/' replace />
     )
 
     return (

@@ -1,11 +1,11 @@
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import './pagenotfound.css'
 
 const PageNotFound = () => {
-    const history = useHistory();
+    const navigate = useNavigate();
 
     const handleClick = () => {
-        history.push('/')
+        navigate('/')
     }
 
     return (

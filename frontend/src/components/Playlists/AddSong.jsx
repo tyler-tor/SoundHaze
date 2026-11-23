@@ -1,13 +1,13 @@
 import React, {useState} from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-// import { useHistory } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import { addSongToPlaylist } from '../../store/playlistSongs';
 import './Playlists.css'
 
 
 function AddSong({songId, setShowModal}) {
   const dispatch = useDispatch();
-  // const history = useHistory();
+  // const navigate = useNavigate();
   const [playlistId, setPlaylistId] = useState('');
 
   const myPlaylists = useSelector((state) => state.session.playlists);

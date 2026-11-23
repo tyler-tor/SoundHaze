@@ -1,13 +1,13 @@
 import React, { useState} from "react";
 import { useDispatch } from "react-redux";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { updateSong } from "../../store/songs";
 import './updatesong.css';
 import { getErrorMessages } from "../../store/csrf";
 
 const UpdateSong = ({ song, setShowModal }) => {
     const dispatch = useDispatch();
-    const history = useHistory();
+    const navigate = useNavigate();
     const [title, setTitle] = useState(song.title);
     const [description, setDescription] = useState(song.description);
     const [url, setUrl] = useState(song.url);
@@ -29,7 +29,7 @@ const UpdateSong = ({ song, setShowModal }) => {
         try {
             await dispatch(updateSong(data));
             setShowModal(false);
-            history.push('/songs');
+            navigate('/songs');
         } catch (response) {
             setErrors(await getErrorMessages(response));
         }

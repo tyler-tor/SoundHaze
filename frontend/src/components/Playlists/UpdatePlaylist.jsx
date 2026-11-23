@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { updatePlaylist } from '../../store/playlists';
 import './Playlists.css'
 import { getErrorMessages } from "../../store/csrf";
 
 function UpdatePlaylist({ playlist, setShowModal }) {
   const dispatch = useDispatch();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const [name, setName] = useState(playlist.name);
   const [url, setUrl] = useState(playlist.previewImage);
@@ -27,7 +27,7 @@ function UpdatePlaylist({ playlist, setShowModal }) {
     await dispatch(updatePlaylist(data))
       .then(() => {
         setShowModal(false)
-        history.push('/playlists')
+        navigate('/playlists')
       }).catch(async (response) => {
         setErrors(await getErrorMessages(response));
       })

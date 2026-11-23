@@ -1,13 +1,13 @@
 import React, { useState} from "react";
 import { useDispatch } from "react-redux";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { updateAlbum } from "../../store/albums";
 import './updatealbum.css';
 import { getErrorMessages } from "../../store/csrf";
 
 const UpdateAlbum = ({ album, setShowModal }) => {
     const dispatch = useDispatch();
-    const history = useHistory();
+    const navigate = useNavigate();
     const [title, setTitle] = useState(album.title);
     const [description, setDescription] = useState(album.description);
     const [url, setUrl] = useState(album.previewImage);
@@ -27,7 +27,7 @@ const UpdateAlbum = ({ album, setShowModal }) => {
         try {
             await dispatch(updateAlbum(data));
             setShowModal(false);
-            history.push('/albums');
+            navigate('/albums');
         } catch (response) {
             setErrors(await getErrorMessages(response));
         }

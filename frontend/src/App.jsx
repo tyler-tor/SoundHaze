@@ -1,4 +1,4 @@
-import { Route, Switch } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import React, { useState, useEffect } from 'react';
 import SignupFormPage from './components/SignupFormPage/SignupFormPage';
@@ -37,35 +37,19 @@ function App() {
     <>
       <Navigation isLoaded={isLoaded} />
       {isLoaded && (
-        <Switch>
-          <Route path='/songs/:songId'>
-            <DisplaySongInfo />
-          </Route>
-          <Route path='/albums/:albumId'>
-            <DisplayAlbumInfo />
-          </Route>
-          <Route path='/playlists/:playlistId'>
-            <DisplayPlaylistInfo />
-          </Route>
-          <Route path='/albums'>
-            <Albums />
-          </Route>
-          <Route path='/playlists'>
-            <Playlists />
-          </Route>
-          <Route path='/songs'>
-            <Songs />
-          </Route>
-          <Route path='/signup'>
-            <SignupFormPage />
-          </Route>
-          <Route exact path='/'>
-            <HomePage />
-          </Route>
-          <Route>
-            <PageNotFound />
-          </Route>
-        </Switch>)}
+        // react-router v7 (S23): <Routes> picks the best match by itself, so
+        // the order and "exact" no longer matter. "*" is the 404 page.
+        <Routes>
+          <Route path='/songs/:songId' element={<DisplaySongInfo />} />
+          <Route path='/albums/:albumId' element={<DisplayAlbumInfo />} />
+          <Route path='/playlists/:playlistId' element={<DisplayPlaylistInfo />} />
+          <Route path='/albums' element={<Albums />} />
+          <Route path='/playlists' element={<Playlists />} />
+          <Route path='/songs' element={<Songs />} />
+          <Route path='/signup' element={<SignupFormPage />} />
+          <Route path='/' element={<HomePage />} />
+          <Route path='*' element={<PageNotFound />} />
+        </Routes>)}
       <Player />
     </>
   );

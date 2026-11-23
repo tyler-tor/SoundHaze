@@ -1,12 +1,12 @@
 import { useDispatch } from "react-redux";
 import { removeAlbum } from "../../store/albums";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { getSongs } from "../../store/songs";
 import { getErrorMessages } from "../../store/csrf";
 
 const DeleteAlbum = ({album, userId}) => {
     const dispatch = useDispatch();
-    const history = useHistory();
+    const navigate = useNavigate();
 
     const handleClick = async (e) => {
         if(album.userId === userId){
@@ -16,7 +16,7 @@ const DeleteAlbum = ({album, userId}) => {
                 await dispatch(removeAlbum(album.id));
                 // Deleting an album also deletes its songs, so refresh them.
                 await dispatch(getSongs());
-                history.push('/albums');
+                navigate('/albums');
                 window.alert('Successfully deleted! Now create another!');
             } catch (response) {
                 window.alert((await getErrorMessages(response)).join('\n'));

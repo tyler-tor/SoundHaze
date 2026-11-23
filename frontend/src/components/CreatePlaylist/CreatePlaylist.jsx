@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { createPlaylist } from '../../store/playlists';
 import ImageComponent from '../ImageComponent';
 import './CreatePlaylist.css';
@@ -8,7 +8,7 @@ import { getErrorMessages } from "../../store/csrf";
 
 function CreatePlaylist({ setShowModal }) {
   const dispatch = useDispatch();
-  const history = useHistory();
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const [errors, setErrors] = useState([]);
@@ -25,7 +25,7 @@ function CreatePlaylist({ setShowModal }) {
     return dispatch(createPlaylist(data))
       .then(() => {
         setShowModal(false)
-        history.push('/playlists');
+        navigate('/playlists');
       }).catch(async (response) => {
         setErrors(await getErrorMessages(response));
       })

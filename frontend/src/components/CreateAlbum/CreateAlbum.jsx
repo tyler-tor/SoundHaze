@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useDispatch } from "react-redux";
-import { useHistory } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { createAlbum } from "../../store/albums";
 import ImageComponent from "../ImageComponent";
 import './createalbum.css';
@@ -9,7 +9,7 @@ import { getErrorMessages } from "../../store/csrf";
 
 const CreateAlbum = ({ setShowModal }) => {
     const dispatch = useDispatch();
-    const history = useHistory();
+    const navigate = useNavigate();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [url, setUrl] = useState('');
@@ -27,7 +27,7 @@ const CreateAlbum = ({ setShowModal }) => {
         try {
             await dispatch(createAlbum(data));
             setShowModal(false);
-            history.push('/albums');
+            navigate('/albums');
         } catch (response) {
             setErrors(await getErrorMessages(response));
         }

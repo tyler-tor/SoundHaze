@@ -35,6 +35,7 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S20 (extras):** the token is bound to the login cookie (csrf-csrf requires a "session identifier"), so the frontend fetches a new token after login/signup/logout, and `csrfFetch` retries a request **once** with a fresh token if the server answers "Invalid CSRF token" (e.g. after the login cookie expires). Restore responds `200` (was `201`).
 - **S21 (test packages removed):** `@testing-library/*` were removed together with `react-scripts`, because `react-scripts test` was their only runner and there are no test files. Frontend tests come back with Vitest in S48. `"type": "module"` was added to `frontend/package.json` (Vite's config is ESM).
 - **S21 (backend path):** the backend's production static-file path changed from `frontend/build` to `frontend/dist` in `backend/routes/index.js` (needed so `NODE_ENV=production` keeps serving the app until S38 removes that code).
+- **S23 (before S48):** S48 (frontend tests) is listed as a prerequisite and is not in this batch. Instead, the built app was exercised in jsdom with a scripted tour (see S23). Lazy-loading routes with `React.lazy` (optional in the plan) was **not** done: the whole bundle is 88 KB gzipped, so splitting buys little.
 
 ## Open questions for Tyler
 
@@ -475,3 +476,20 @@ _New item (not in the original plan), done first at Tyler's request._
   - New render check: the built bundle was run in **jsdom** (a browser-like DOM for Node) against the seeded backend. Every page rendered with **0 errors**: `/` (landing page with Demo button), `/songs` (100 songs, 100 images), `/albums` (7), `/playlists` (15), `/albums/1` ("Sacred", Los Lonley Boys, 15 images), `/playlists/1` ("Chill" by Demo-lition), `/songs/1` ("Song Information: My Way"), an unknown URL (404 page) and `/signup`. Clicking **Demo** logged in (login + CSRF cookies set, nav shows Demo-lition, Create Album / Create Playlist), and clicking the Songs/Albums/Playlists nav links changed pages; browser Back worked.
   - **Not tested in a real browser:** audio playback and visual layout.
 - **Things to watch / follow-ups:** With `createRoot`, `React.StrictMode` runs every `useEffect` twice in **development** (mount, unmount, mount) to surface bugs. You will see some API requests twice in the dev Network tab. Production builds run effects once.
+
+## S23 — react-router v5 to v7
+- **Problem:** react-router v5 is unmaintained and does not support React 19.
+- **What changed:**
+  - `react-router-dom` `^5.3.3` → `^7.18.6`.
+  - `App.jsx`: `<Switch>` with child `<Route>`s → `<Routes>` with `<Route path=... element={<Page />} />`. v7 ranks routes itself, so `exact` and route order no longer matter. The catch-all 404 route is now `path='*'`.
+  - `useHistory()` / `history.push(x)` → `useNavigate()` / `navigate(x)` in 10 components (`CreateSong`, `UpdateSong`, `CreateAlbum`, `UpdateAlbum`, `DeleteAlbum`, `CreatePlaylist`, `UpdatePlaylist`, `DeletePlaylist`, `PageNotFound`, `Navigation/ProfileButton`), plus the commented-out code in `AddSong`.
+  - `SignupFormPage`: `<Redirect to='/' />` → `<Navigate to='/' replace />` (`replace` keeps the old behaviour of not adding a history entry).
+  - `NavLink` needed no change: the app never used `activeClassName`, and v7 still adds the `active` class. `useParams` and `BrowserRouter` work the same.
+- **Files:** `frontend/package.json`, `frontend/package-lock.json`, `frontend/src/App.jsx`, `frontend/src/components/SignupFormPage/SignupFormPage.jsx`, and the 11 component files listed above
+- **How to verify** (verified):
+  - `npm run build` succeeds (88.5 KB gzipped JS; react-router 7 is a bit larger than 5).
+  - jsdom tour against the seeded backend, **0 errors**: all pages render on direct load (`/`, `/songs`, `/albums`, `/playlists`, `/albums/1`, `/playlists/1`, `/songs/1`, unknown URL → 404 page, `/signup`); Demo login; nav links switch pages; Back works; visiting `/signup` while logged in redirects to `/` (`Navigate`); creating a playlist through the modal succeeds and stays on `/playlists` with the new playlist listed (`navigate`); Log Out from the profile menu returns to `/` and shows the Demo button again; the 404 page's "Back to Home!" button goes to `/`.
+  - **Not tested in a real browser:** the update/delete album and song modals (same `navigate` change, not clicked in the tour).
+- **Things to watch / follow-ups:**
+  - In v7, `navigate()` must be called from event handlers or effects, never during render (use `<Navigate>` there), which is how the code is written now.
+  - Route pages could later be lazy-loaded with `React.lazy` if the bundle grows.
