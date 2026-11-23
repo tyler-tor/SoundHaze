@@ -11,9 +11,13 @@ import { ModalProvider } from './context/Modal'
 
 
 const store = configureStore();
-if (process.env.NODE_ENV !== 'production') {
-  restoreCSRF();
 
+// Get a CSRF token as soon as the app starts, in every environment (S20).
+restoreCSRF().catch(() => {
+  // csrfFetch will try again before the first POST/PUT/DELETE.
+});
+
+if (process.env.NODE_ENV !== 'production') {
   window.csrfFetch = csrfFetch;
   window.store = store;
   window.sessionActions = sessionActions;

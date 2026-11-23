@@ -1,4 +1,4 @@
-import { csrfFetch } from "./csrf";
+import { csrfFetch, restoreCSRF } from "./csrf";
 
 const SET_SESSION_USER = 'session/SET_SESSION_USER';
 const REMOVE_SESSION_USER = 'session/REMOVE_SESSION_USER';
@@ -44,6 +44,8 @@ export const loginUser = (user) => async (dispatch) => {
 
     if (res.ok) {
         const user = await res.json();
+        // The CSRF token is tied to the login cookie: get a new one.
+        await restoreCSRF();
         dispatch(setSessionUser(user));
         return user;
     }
@@ -88,6 +90,7 @@ export const signUpUser = (user) => async (dispatch) => {
 
     if (res.ok) {
         const newUser = await res.json();
+        await restoreCSRF(); // new login cookie -> new CSRF token
         dispatch(signUpNewUser(newUser));
         return newUser;
     };
@@ -132,6 +135,7 @@ export const logoutUser = () => async (dispatch) => {
 
     if (res.ok) {
         const loggedOut = await res.json();
+        await restoreCSRF(); // logged out -> new CSRF token
         dispatch(removeSessionUser())
         return loggedOut;
     };

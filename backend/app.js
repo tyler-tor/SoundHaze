@@ -4,7 +4,7 @@ const express = require('express');
 const { check } = require('express-validator');
 const morgan = require('morgan');
 const cors = require('cors');
-const csurf = require('csurf');
+const { csrfProtection } = require('./utils/csrf');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const { environment } = require('./config');
@@ -69,16 +69,9 @@ app.use(
     })
 );
 
-//Set the _csrf token and create req.csrfToken method
-app.use(
-    csurf({
-        cookie: {
-            secure: isProduction,
-            sameSite: isProduction && 'Lax',
-            httpOnly: true
-        }
-    })
-)
+// CSRF check for every POST/PUT/PATCH/DELETE (see utils/csrf.js).
+// The token comes from GET /api/csrf/restore (routes/index.js).
+app.use(csrfProtection);
 
 app.use(routes);
 

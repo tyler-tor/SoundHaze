@@ -10,6 +10,8 @@ module.exports = {
         // Parsed and checked in utils/auth.js. Default: 7 days.
         expiresIn: process.env.JWT_EXPIRES_IN || '604800'
     },
+    // Optional. Signs CSRF tokens; if unset, a key derived from JWT_SECRET is used.
+    csrfSecret: process.env.CSRF_SECRET,
     // S3 uploads (awsS3.js). Defaults match the original hard-coded bucket.
     s3: {
         bucket: process.env.S3_BUCKET || 'soundcloud-bucket',

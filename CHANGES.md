@@ -30,6 +30,9 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S0 (seeder bookkeeping):** `seederStorage` changed from `"sequelize"` (a `SequelizeData` table recording which seeders ran) to `"none"`. The demo seeder checks the data itself, so it can run on every deploy; with the old table, `db:reset` would have dropped the data but kept the "already seeded" record and skipped re-seeding.
 - **S17:** the S9 note said to re-check the helmet options after the upgrade. Done: `crossOriginEmbedderPolicy: false` was removed because helmet 8 already has it off; the CSP and `crossOriginResourcePolicy` options are unchanged.
 - **S19 (before S38/S46):** the plan lists S46 (API tests) and S38 (API-only server, which removes the catch-all route) as prerequisites. Neither is in this batch. Instead, the catch-all was converted to Express 5 syntax (`/{*splat}`), and the API was checked with the curl smoke/validation scripts plus a production-mode routing check (see S19). Two extra Express 5 fixes not named in the plan: an empty `req.body = {}` fallback (Express 5 leaves it `undefined`) and reading song-list query params with `matchedData()` (Express 5's `req.query` cannot be changed by sanitizers).
+- **S20 (before S38):** the plan lists S38 as a prerequisite; it is not in this batch, so S20 was done on the current server (which still serves the build in production). The CSRF flow does not depend on who serves `index.html`, so it will keep working after S38.
+- **S20 (token delivery):** instead of a JavaScript-readable `XSRF-TOKEN` cookie, `GET /api/csrf/restore` returns the token in its JSON body (`{ csrfToken }`) and the frontend keeps it in memory; only the httpOnly hash cookie is set. The header is now `X-CSRF-Token` (was `XSRF-Token`). `js-cookie` is no longer needed and was removed from the frontend.
+- **S20 (extras):** the token is bound to the login cookie (csrf-csrf requires a "session identifier"), so the frontend fetches a new token after login/signup/logout, and `csrfFetch` retries a request **once** with a fresh token if the server answers "Invalid CSRF token" (e.g. after the login cookie expires). Restore responds `200` (was `201`).
 
 ## Open questions for Tyler
 
@@ -410,3 +413,30 @@ _New item (not in the original plan), done first at Tyler's request._
 - **Things to watch / follow-ups:**
   - Express 5 route syntax differs: `*` must be named (`/*splat` or `/{*splat}`), optional parts use braces (`/:id{.:ext}`), and regex characters in strings are not allowed. Keep this in mind when adding routes.
   - Several route files still have an unused circular `require('../../app')` at the top (noted in S2). Harmless; remove in the lint item (S47).
+
+## S20 — Replace `csurf` and make CSRF work with the frontend on S3
+- **Problem:** `csurf` is deprecated and archived. Worse, in production the CSRF cookie was only set when Express served `index.html`, and `/api/csrf/restore` existed only in development. Once the React build is served by S3/CloudFront, Express never serves `index.html`, so the browser would never get a token and **every** POST/PUT/DELETE (including the demo login) would fail with 403.
+- **What changed (backend):**
+  - `csurf` removed; `csrf-csrf` (v4) added. New `backend/utils/csrf.js` sets it up with the "double-submit" pattern:
+    - `GET /api/csrf/restore` (now in **every** environment, registered in `routes/index.js`) returns `{ csrfToken }`, sets an httpOnly cookie holding a matching HMAC hash, and sends `Cache-Control: no-store`.
+    - Every POST/PUT/PATCH/DELETE must send the token in the `X-CSRF-Token` header. Missing or wrong → `403` with `title: "Invalid CSRF token"` and the usual `errors` array.
+    - Cookie: `soundhaze.x-csrf-token` in development; `__Host-soundhaze.x-csrf-token` with `Secure` in production (the `__Host-` prefix makes browsers reject the cookie unless it is Secure, `Path=/` and has no `Domain`). Always `SameSite=Lax`, `HttpOnly`.
+    - The token is tied to the login cookie (`token`), or to "anonymous" when logged out, so a token taken before login stops working after login.
+    - Secret: `CSRF_SECRET` if set, otherwise a separate key derived from `JWT_SECRET` (no new required env var).
+  - `routes/index.js`: the production `index.html` routes no longer set an `XSRF-TOKEN` cookie.
+- **What changed (frontend):**
+  - `store/csrf.js`: `restoreCSRF()` fetches the token and keeps it in memory; `csrfFetch` sends it as `X-CSRF-Token`, fetches one first if it has none, and retries once with a fresh token if the server says "Invalid CSRF token".
+  - `index.js`: `restoreCSRF()` runs on startup in every environment (the debug `window.*` helpers stay dev-only).
+  - `store/session.js`: after a successful login, signup or logout, a new token is fetched.
+  - `js-cookie` removed from `frontend/package.json`.
+- **Why this works on S3/CloudFront:** with `/api/*` routed through the same CloudFront domain, the API is same-origin, so the `SameSite=Lax` cookies are sent and the app gets its token from `/api/csrf/restore` no matter who served `index.html`.
+- **Files:** `backend/utils/csrf.js` (new), `backend/app.js`, `backend/routes/index.js`, `backend/config/index.js`, `backend/package.json`, `backend/package-lock.json`, `frontend/src/store/csrf.js`, `frontend/src/store/session.js`, `frontend/src/index.js`, `frontend/package.json`, `frontend/package-lock.json`
+- **How to verify** (verified):
+  - curl: `GET /api/csrf/restore` → `200 {"csrfToken":"..."}` + cookie. Login with the token → `200`. A POST with the **pre-login** token after logging in → `403`. With a fresh token → `201`. Forged token `abc|def` → `403`. No token → `403`. Logout → `200`. All validation/upload checks pass.
+  - Production mode (`NODE_ENV=production`, dummy `DATABASE_URL`): restore sets `__Host-soundhaze.x-csrf-token=...; Path=/; HttpOnly; Secure; SameSite=Lax`; a POST with that token passes the CSRF check (gets `401 Authentication required`, as expected without login); `GET /` serves `index.html` without setting any cookie.
+  - The real `frontend/src/store/csrf.js`, run in Node against the backend with a cookie jar: login without a prior restore (fetches a token itself) → 200; POST right after login without restore → 403, automatic restore, retry → 201 (3 requests); after restore → 201 in 1 request; validation errors still reach `getErrorMessages`; multipart signup → 200; logout → 200.
+  - `npm run build` (frontend) succeeds.
+  - **Not tested in a real browser** (none available to this session): log in with the Demo button, create a playlist, log out, log in again.
+- **Things to watch / follow-ups:**
+  - Anything that calls the API outside `csrfFetch` (curl, Postman, a future mobile app) must first `GET /api/csrf/restore` with a cookie jar and send `X-CSRF-Token`.
+  - In production the CSRF cookie requires HTTPS (`Secure`). Behind CloudFront that is the case; testing a production build over plain `http://` will fail with 403.

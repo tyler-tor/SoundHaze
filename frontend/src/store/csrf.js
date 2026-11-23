@@ -1,31 +1,69 @@
-import Cookies from "js-cookie";
+// CSRF handling (S20). The backend uses the "double-submit" pattern:
+// GET /api/csrf/restore returns { csrfToken } and sets a matching httpOnly
+// cookie. Every non-GET request must send the token in the X-CSRF-Token
+// header. The token is kept in memory here (not in a readable cookie).
+// It is tied to the login, so restoreCSRF() runs again after login, signup
+// and logout (see store/session.js).
 
+let csrfToken = null;
+let pendingRestore = null;
 
-export async function csrfFetch(url, options = {}) {
+// Fetch a fresh CSRF token. Concurrent callers share one request.
+export function restoreCSRF() {
+    if (!pendingRestore) {
+        pendingRestore = window
+            .fetch('/api/csrf/restore', { credentials: 'same-origin' })
+            .then(async (res) => {
+                if (!res.ok) throw res;
+                const data = await res.json();
+                csrfToken = data.csrfToken;
+                return csrfToken;
+            })
+            .finally(() => {
+                pendingRestore = null;
+            });
+    }
+    return pendingRestore;
+}
 
-    options.method = options.method || 'GET';
-    options.headers = options.headers || {};
+const isCsrfError = async (res) => {
+    if (res.status !== 403) return false;
+    try {
+        const data = await res.clone().json();
+        return data && data.title === 'Invalid CSRF token';
+    } catch (e) {
+        return false;
+    }
+};
 
-    if (options.method.toUpperCase() !== "GET") {
-        if (options.headers["Content-Type"] === "multipart/form-data") {
-          delete options.headers["Content-Type"];
+export async function csrfFetch(url, options = {}, retried = false) {
+    const method = (options.method || 'GET').toUpperCase();
+    const headers = { ...(options.headers || {}) };
+
+    if (method !== 'GET') {
+        if (headers['Content-Type'] === 'multipart/form-data') {
+            // Let the browser set the multipart boundary itself.
+            delete headers['Content-Type'];
         } else {
-          options.headers["Content-Type"] =
-            options.headers["Content-Type"] || "application/json";
+            headers['Content-Type'] = headers['Content-Type'] || 'application/json';
         }
-        options.headers["XSRF-Token"] = Cookies.get("XSRF-TOKEN");
-      }
+        if (!csrfToken) await restoreCSRF();
+        headers['X-CSRF-Token'] = csrfToken;
+    }
 
-    const res = await window.fetch(url, options);
+    const res = await window.fetch(url, { ...options, method, headers, credentials: 'same-origin' });
 
-    if(res.status >= 400) throw res;
+    // The token can go stale (e.g. the login cookie expired). Get a new one
+    // and try exactly once more.
+    if (method !== 'GET' && !retried && (await isCsrfError(res))) {
+        await restoreCSRF();
+        return csrfFetch(url, options, true);
+    }
+
+    if (res.status >= 400) throw res;
 
     return res;
-};
-
-export function restoreCSRF() {
-    return csrfFetch('/api/csrf/restore');
-};
+}
 
 // Turn a failed request into a list of messages to show the user.
 // csrfFetch throws the fetch Response for any status >= 400, and the API
