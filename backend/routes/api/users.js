@@ -1,6 +1,7 @@
 const express = require('express');
 const { setTokenCookie, requireAuth, restoreUser } = require('../../utils/auth');
 const { User } = require('../../db/models');
+const { UniqueConstraintError } = require('sequelize');
 const { check } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
 const {singlePublicFileUpload, singleMulterUpload} = require('../../awsS3');
@@ -42,7 +43,9 @@ const validateSignup = [
 router.post('/signup', singleMulterUpload('image'), validateSignup, async(req, res, next) => {
     const { email, password, username, firstName, lastName } = req.body;
     try{
-        const profileImageUrl = await singlePublicFileUpload(req.file);
+        // The profile image is optional. Without one, previewImage stays null
+        // and the User model returns a default avatar URL instead.
+        const profileImageUrl = req.file ? await singlePublicFileUpload(req.file) : null;
         const user = await User.signup({ email, username, password, profileImageUrl, firstName, lastName });
 
         // Token goes only in the httpOnly cookie, never in the JSON body.
@@ -52,9 +55,17 @@ router.post('/signup', singleMulterUpload('image'), validateSignup, async(req, r
             user
         );
     }catch(e){
-        e.status = 403;
-        e.message = 'User already exists'
-        next(e)
+        // Only a duplicate username/email is a "user already exists" case.
+        // Anything else (S3 failure, DB down, ...) is passed on unchanged and
+        // becomes a 500, so the real cause shows up in the logs.
+        if (e instanceof UniqueConstraintError) {
+            const err = new Error('Username or email already taken.');
+            err.title = 'Signup failed';
+            err.errors = ['Username or email already taken.'];
+            err.status = 409;
+            return next(err);
+        }
+        return next(e);
     }
 });
 

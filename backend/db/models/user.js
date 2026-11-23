@@ -2,6 +2,11 @@
 const {Model, Validator} = require('sequelize');
 const bcrypt = require('bcryptjs');
 
+// Shown for users who signed up without a profile image. The default is a
+// file in frontend/public, so it is served by the frontend itself. Set
+// DEFAULT_AVATAR_URL to use a different image (for example one on S3/CloudFront).
+const DEFAULT_AVATAR_URL = process.env.DEFAULT_AVATAR_URL || '/default-avatar.svg';
+
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
 
@@ -108,7 +113,10 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     previewImage: {
-      type: DataTypes.STRING
+      type: DataTypes.STRING,
+      get() {
+        return this.getDataValue('previewImage') || DEFAULT_AVATAR_URL;
+      }
     }
   }, {
     sequelize,

@@ -133,3 +133,20 @@ _Done first (as the plan's "Recommended order" says) so the frontend could be bu
   - In the UI, open any album or playlist page: only the avatar and username are shown.
 - **Things to watch / follow-ups:** The `currentUser` scope still includes email. It is used by `artist.js` routes only to look up the user before listing songs/albums/playlists (the user object itself is not returned), so nothing leaks today. If a future route returns that object directly, use `includedArtist` instead.
 
+## S7 — Make signup work without a profile image, and return honest errors
+- **Problem:** `POST /api/users/signup` always called `singlePublicFileUpload(req.file)`. With no image, `req.file` is `undefined` and `awsS3.js` crashed while destructuring it. The `catch` block then turned **every** error into `403 "User already exists"`, so the real cause was hidden (confirmed: signup without an image said "User already exists" for a brand-new username).
+- **What changed:**
+  - The image is uploaded only if one was sent (`req.file ? upload : null`).
+  - Users without an image get a default avatar: the User model's `previewImage` now has a getter that returns `DEFAULT_AVATAR_URL` when the stored value is empty. The default is `/default-avatar.svg`, a tiny grey placeholder added to `frontend/public/`, so the frontend serves it itself. You can override it with the `DEFAULT_AVATAR_URL` env var. The DB keeps `NULL`, so you can change the default later without touching rows.
+  - Duplicate username or email (Sequelize `UniqueConstraintError`) now returns **409** with `errors: ["Username or email already taken."]` (the signup form already displays `errors`).
+  - Every other error is passed on unchanged, so it becomes a 500 with the real message in the server log.
+- **Files:** `backend/routes/api/users.js`, `backend/db/models/user.js`, `frontend/public/default-avatar.svg` (new)
+- **How to verify** (verified with curl, multipart form like the real form sends):
+  - `curl -F username=newuser1 -F email=new1@x.io -F password=secret1 ... /api/users/signup` (no image) → `200`, user created, `previewImage: "/default-avatar.svg"`, logged in (`GET /api/my` returns the new user).
+  - Same username again with a different email → `409 "Username or email already taken."`. Same email with a different username → `409`.
+  - Signup **with** an image needs real S3 access, so it was not tested here (see S8).
+  - Demo login unaffected.
+- **Things to watch / follow-ups:**
+  - If the image upload succeeds but the user insert then fails (e.g. duplicate username), the uploaded image is left orphaned in S3. Rare and harmless; could be fixed later by checking for duplicates before uploading.
+  - With the frontend on S3/CloudFront and the API elsewhere, `/default-avatar.svg` still resolves against the frontend's own domain, which is where the file lives.
+
