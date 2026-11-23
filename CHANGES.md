@@ -312,3 +312,16 @@ _New item (not in the original plan), done first at Tyler's request._
   - Any **future seeder must also be idempotent** (check before inserting), because with `seederStorage: "none"` every `db:seed` runs every seeder file.
   - If you add a seed song whose title already exists, the lookup by title would be ambiguous; the seeder fails loudly ("Seed lookup failed") rather than guessing. Titles are unique today (the DB enforces it).
   - The production config still needs `DATABASE_URL` and forces SSL; making that configurable is S36.
+
+## S14 — Safe backend upgrades within the same major versions
+- **Problem:** Old patch/minor versions with known advisories (the critical one was in `sequelize` 6.21). `nodemon` and `per-env` were extra packages for things Node 22 and plain npm scripts already do.
+- **What changed:**
+  - Upgraded (same major version, no API changes): `sequelize` 6.21 → 6.37.8, `sequelize-cli` 6.4 → 6.6.5, `pg` 8.7 → 8.23, `dotenv` 16.0 → 16.6 (kept on 16; 17+ prints a banner on every start), `morgan` 1.10 → 1.12, `cookie-parser` 1.4.6 → 1.4.7, `sqlite3` 5.0.8 → 5.1.7 (dev only; kept, since the walkthrough and tests use it).
+  - Removed `nodemon` (replaced by `node --watch`, built into Node 22) and `per-env`.
+  - New scripts in `backend/package.json`: `npm start` = `node ./bin/www` (always, any environment), `npm run dev` = `node --watch ./bin/www` (restarts when a file changes). The root `dev:backend` script now runs `npm run dev` in `backend/`.
+- **Files:** `backend/package.json`, `backend/package-lock.json`, `package.json`
+- **How to verify** (verified): fresh SQLite DB → `npm run db:migrate`, `npm run db:seed` (and a second `db:seed` no-ops) → `npm start` → CSRF restore, demo login, `/api/my`, songs list (20 of 100), 400/403/404 checks, playlist create, comment, logout all behave as before. `npm run dev` starts and serves requests.
+- **Things to watch / follow-ups:**
+  - **Changed command:** `start:development` / `start:production` are gone. Use `npm run dev` locally and `npm start` in production (set `NODE_ENV=production` in the environment, as before).
+  - `node --watch` restarts on changes to files the app `require`s; it does not watch `.env`. Restart by hand after editing `.env`.
+  - `@faker-js/faker` (dev dependency) is not used anywhere; it can be removed in a cleanup item.
