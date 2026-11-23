@@ -3,6 +3,13 @@
 This file explains every change made while working through `MODERNIZATION_PLAN.md`.
 Each section matches one plan item (S1, S2, ...) and one git commit on the `modernize` branch.
 
+## Database rule (read this before deploying)
+
+- **Every deploy:** `npm run db:migrate` (adds new tables/columns, never deletes) and `npm run db:seed` (inserts the demo data **only into an empty database**; otherwise it prints "skipping" and does nothing).
+- **Never in production:** `db:seed:undo`, `db:migrate:undo`, `npm run db:reset`, or truncating tables. These now refuse to run when `NODE_ENV=production`.
+- **Never** `docker compose down -v` on the server: `-v` deletes the Postgres data volume, i.e. every real user, song and playlist. Plain `docker compose down` is fine.
+- `npm run db:reset` is for your laptop only (drops all tables, migrates, re-seeds).
+
 ## Deviations from plan
 
 - **S3 (song fields):** the plan's allow-list for songs was `title`, `description`. I also allowed `previewImage`, because the existing Update Song form lets the owner change the song's cover image and leaving it out would silently break that feature.
@@ -15,6 +22,12 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S11 (invalid params):** instead of silently clamping bad values (the old code turned `page=-1` into `0`), invalid `page`/`size`/`createdAt` now return `400` with a clear message. Maximum `size` is 100.
 - **S12 (more files than named):** the plan named the `.then(() => ..., history.push(...))` bug in `CreateSong` only. The exact same bug was in `UpdateSong`, `UpdateAlbum` and `CreateAlbum`, and a related one (`.then(dispatch(...))` plus reading the id from an empty Redux slice) in `DeleteAlbum`/`DeletePlaylist`, so those were fixed in the same commit.
 - **Order of commits:** S13 was committed first (the plan's "Recommended order" says to do it first), then S1 to S12 in number order.
+
+### Batch 2 deviations
+
+- **S0 (new item; overlaps S37):** removing the fixed ids from the seeds is part of S37 in the plan. It was required for safe seeding, so it was done here. The rest of S37 (Jane Doe's broken image URL, dropping the `UNIQUE` on `Songs.title`/`url`, wider titles, `MEDIA_BASE_URL` seed URLs) is **not** done; the seed data is copied exactly as it was.
+- **S0 (stricter skip rule):** the seeder skips if the demo user exists **or if the Users table has any rows at all** ("seed only into an empty DB"). If someone ever deleted the demo user from a live database, the seeder still would not pour demo data into it.
+- **S0 (seeder bookkeeping):** `seederStorage` changed from `"sequelize"` (a `SequelizeData` table recording which seeders ran) to `"none"`. The demo seeder checks the data itself, so it can run on every deploy; with the old table, `db:reset` would have dropped the data but kept the "already seeded" record and skipped re-seeding.
 
 ## Open questions for Tyler
 
@@ -267,3 +280,35 @@ _Done first (as the plan's "Recommended order" says) so the frontend could be bu
   - Remaining lint warnings (missing `alt`, unused vars, `useEffect` deps in `App.js`/`HomePage.js`) are pre-existing and belong to S32/S47.
   - Frontend tests (S48) and an end-to-end smoke test (S50) would catch regressions like these automatically.
 
+---
+
+# Batch 2: modern stack (S0, S14 to S24)
+
+
+## S0 — Safe seeding
+_New item (not in the original plan), done first at Tyler's request._
+- **Problem:** The old Render deploy ran `db:seed:undo:all` and then `db:seed:all` on **every deploy**, which deleted every real user, song and playlist and replaced them with the demo data. The seeders also inserted fixed ids (`id: 1` ... `id: 7`). On Postgres that does not move the auto-increment counter, so the first real signup after seeding tries `id = 1` and fails with a unique-key error. Nothing stopped an undo from running against production.
+- **What changed:**
+  - The 7 old seeder files were replaced by **one** seeder, `db/seeders/20261123000000-demo-data.js`, plus a plain data file `db/seed-data.js` (generated from the old seeders by a script, so the content is identical: 7 users, 7 albums, 100 songs, 15 playlists with 151 playlist entries, 2 comments).
+  - **Idempotent:** the seeder first checks the Users table. If the demo user `Demo-lition` exists, or there are any users at all, it prints a "skipping" message and inserts nothing. Running it twice is harmless.
+  - **No fixed ids:** relationships in `seed-data.js` use names (album `owner: "Los Lonley Boys"`, song `album: "Sacred"`, playlist `songs: ["My Way", ...]`). The seeder inserts users, looks up their new ids by username, then albums (looked up by title), songs (by title), playlists (by name), playlist songs and comments. The database picks every id, so Postgres counters stay correct.
+  - **All-or-nothing:** everything runs in one transaction.
+  - **Production guard:** new `db/safety.js` with `assertNotProduction(action)`. The seeder's `down` and every migration's `down` call it, so `sequelize db:seed:undo` / `db:migrate:undo` throw "Refusing to ... because NODE_ENV=production" instead of deleting data. `scripts/assert-not-production.js` does the same check from the command line.
+  - **npm scripts** (in `backend/`, with the same names forwarded from the repo root):
+    - `npm run db:migrate`: safe every deploy.
+    - `npm run db:seed`: safe every deploy; no-ops when data exists.
+    - `npm run db:reset`: development only. Refuses in production, otherwise undoes all migrations (drops the tables), migrates and seeds again.
+  - `config/database.js` now loads `backend/.env` itself (`require('dotenv').config()`), so these scripts work without `npx dotenv`. `seederStorage` is now `"none"` (see Deviations).
+- **The rule:** migrate on every deploy; seed only into an empty database (the seeder enforces this); never undo or truncate in production; never `docker compose down -v` (it deletes the database volume). See "Database rule" at the top of this file.
+- **Files:** `backend/db/seeders/20261123000000-demo-data.js` (new), `backend/db/seed-data.js` (new), `backend/db/safety.js` (new), `backend/scripts/assert-not-production.js` (new), `backend/db/seeders/2022*.js` (7 files deleted), `backend/db/migrations/*.js` (guard line in each `down`), `backend/config/database.js`, `backend/package.json`, `package.json`
+- **How to verify** (all verified on SQLite):
+  1. Delete the dev DB, then `npm run db:migrate` and `npm run db:seed` → "Demo seed data inserted." Counts: Users 7, Albums 7, Songs 100, Playlists 15, PlaylistSongs 151, Comments 2. Ids and relations match the old seeds (song 1 "My Way" → album 1 "Sacred" → user 2; playlist 1 starts with songs 1, 2, 14).
+  2. `npm run db:seed` again → `Demo user "Demo-lition" already exists: skipping demo seed data.` and the counts do not change.
+  3. `npm run db:reset` → tables dropped, recreated, re-seeded (7 users).
+  4. `NODE_ENV=production npm run db:reset` → "Refusing to reset the database because NODE_ENV=production..." and exit code 1. Calling the seeder's or a migration's `down` with `NODE_ENV=production` throws the same kind of error.
+  5. Demo login (`Demo-lition` / `password`) and the usual API checks still pass.
+- **Things to watch / follow-ups:**
+  - **Existing databases** (for example the old Render Postgres) that were seeded by the old files: the new seeder sees the users and does nothing. Nothing is deleted. Their `SequelizeData` table is now simply unused.
+  - Any **future seeder must also be idempotent** (check before inserting), because with `seederStorage: "none"` every `db:seed` runs every seeder file.
+  - If you add a seed song whose title already exists, the lookup by title would be ambiguous; the seeder fails loudly ("Seed lookup failed") rather than guessing. Titles are unique today (the DB enforces it).
+  - The production config still needs `DATABASE_URL` and forces SSL; making that configurable is S36.

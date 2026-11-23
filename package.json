@@ -8,7 +8,10 @@
     "dev:frontend": "npm start --prefix frontend",
     "build": "npm run build --prefix frontend",
     "start": "npm start --prefix backend",
-    "sequelize": "npm run --prefix backend sequelize"
+    "sequelize": "npm run --prefix backend sequelize",
+    "db:migrate": "npm run db:migrate --prefix backend",
+    "db:seed": "npm run db:seed --prefix backend",
+    "db:reset": "npm run db:reset --prefix backend"
   },
   "repository": {
     "type": "git",

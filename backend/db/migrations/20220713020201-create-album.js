@@ -50,6 +50,7 @@ module.exports = {
     }, options);
   },
   async down(queryInterface, Sequelize) {
+    require('../safety').assertNotProduction('undo a migration (it drops a table)');
     await queryInterface.dropTable('Albums', options);
   }
 };
