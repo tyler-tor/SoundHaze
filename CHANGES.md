@@ -465,3 +465,13 @@ _New item (not in the original plan), done first at Tyler's request._
   - Env vars for browser code must start with `VITE_` and are read as `import.meta.env.VITE_...`.
   - Vite does not run ESLint during builds (CRA did). Linting comes with S47.
   - The Font Awesome kit `<script>` in `index.html` is unchanged.
+
+## S22 — Use React 18's `createRoot`
+- **Problem:** `ReactDOM.render` is deprecated in React 18 (and removed in React 19). With it, React 18 runs the app in legacy React 17 mode, without automatic batching or concurrent features.
+- **What changed:** `src/index.jsx` now does `createRoot(document.getElementById('root')).render(<React.StrictMode><Root /></React.StrictMode>)` with `createRoot` from `react-dom/client`. (`context/Modal.jsx` still imports `react-dom` for `createPortal`, which is correct.)
+- **Files:** `frontend/src/index.jsx`
+- **How to verify** (verified):
+  - `npm run build` succeeds.
+  - New render check: the built bundle was run in **jsdom** (a browser-like DOM for Node) against the seeded backend. Every page rendered with **0 errors**: `/` (landing page with Demo button), `/songs` (100 songs, 100 images), `/albums` (7), `/playlists` (15), `/albums/1` ("Sacred", Los Lonley Boys, 15 images), `/playlists/1` ("Chill" by Demo-lition), `/songs/1` ("Song Information: My Way"), an unknown URL (404 page) and `/signup`. Clicking **Demo** logged in (login + CSRF cookies set, nav shows Demo-lition, Create Album / Create Playlist), and clicking the Songs/Albums/Playlists nav links changed pages; browser Back worked.
+  - **Not tested in a real browser:** audio playback and visual layout.
+- **Things to watch / follow-ups:** With `createRoot`, `React.StrictMode` runs every `useEffect` twice in **development** (mount, unmount, mount) to surface bugs. You will see some API requests twice in the dev Network tab. Production builds run effects once.

@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App';
 import { Provider } from 'react-redux';
@@ -35,9 +35,9 @@ function Root() {
   )
 }
 
-ReactDOM.render(
+// React 18 root API (S22). ReactDOM.render ran the app in legacy React 17 mode.
+createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Root />
-  </React.StrictMode>,
-  document.getElementById('root')
+  </React.StrictMode>
 );
