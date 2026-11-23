@@ -6,6 +6,7 @@ const { handleValidationErrors } = require('../../utils/validation');
 const app = require('../../app');
 const user = require('../../db/models/user');
 const {singlePublicFileUpload, singleMulterUpload} = require('../../awsS3')
+const { requireOwner } = require('../../utils/ownership');
 
 const router = express.Router();
 
@@ -39,38 +40,22 @@ const albumCouldNotBeFound = (next) => {
     next(e)
 }
 
-router.post('/:albumId/songs', requireAuth, singleMulterUpload('url'), validateSong, async(req, res, next) => {
-    // console.log('body', req.file);
-    const { albumId } = req.params;
+// Ownership is checked BEFORE multer/S3 so a non-owner's file is never uploaded.
+router.post('/:albumId/songs', requireAuth, requireOwner(Album, 'albumId'), singleMulterUpload('url'), validateSong, async(req, res, next) => {
     const { user } = req;
+    const album = res.locals.record;
     const { title, description } = req.body;
     const url = await singlePublicFileUpload(req.file);
-    const album = await Album.findOne({
-        include: {
-            model: User
-        },
-        where: {
-            userId: user.id,
-            id: albumId
-        }
-    });
 
-    if(album){
-        const song = await Song.create({
-            title,
-            description,
-            url,
-            previewImage: album.previewImage,
-            albumId,
-            userId: user.id
-        })
-        return res.json(song)
-    }else{
-        const err = new Error();
-        err.status = 404;
-        err.message = 'Album does not exsist.';
-        next(err)
-    }
+    const song = await Song.create({
+        title,
+        description,
+        url,
+        previewImage: album.previewImage,
+        albumId: album.id,
+        userId: user.id
+    })
+    return res.json(song)
 });
 
 router.get('/:albumId', async(req, res, next) => {
@@ -92,18 +77,12 @@ router.get('/:albumId', async(req, res, next) => {
     }
 });
 
-router.put('/:albumId', [requireAuth, validateAlbum], async(req, res, next) => {
-    const { albumId } = req.params;
+router.put('/:albumId', [requireAuth, requireOwner(Album, 'albumId'), validateAlbum], async(req, res, next) => {
+    const album = res.locals.record;
 
-    const album = await Album.findByPk(albumId);
+    await album.update({...req.body});
 
-    if(album){
-        await album.update({...req.body});
-
-        return res.json(album)
-    }else{
-        albumCouldNotBeFound(next)
-    }
+    return res.json(album)
 });
 
 router.delete('/:albumId', requireAuth, async(req, res, next) => {

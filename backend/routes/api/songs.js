@@ -3,6 +3,7 @@ const { setTokenCookie, requireAuth, restoreUser } = require('../../utils/auth')
 const { Song, User, Album, Comment } = require('../../db/models');
 const { check, query, condition } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
+const { requireOwner } = require('../../utils/ownership');
 const app = require('../../app');
 const song = require('../../db/models/song');
 
@@ -94,17 +95,11 @@ router.get('/:songId/comments', async(req, res, next) => {
     }
 })
 
-router.put('/:songId', requireAuth, async (req, res, next) => {
-    const { songId } = req.params;
+router.put('/:songId', requireAuth, requireOwner(Song, 'songId'), async (req, res, next) => {
+    const song = res.locals.record;
 
-    const song = await Song.findByPk(songId);
-
-    if (song) {
-        await song.update({...req.body});
-        return res.json(song)
-    } else {
-        songCouldNotBeFound(next);
-    }
+    await song.update({...req.body});
+    return res.json(song)
 })
 
 router.get('/:songId', async (req, res, next) => {

@@ -3,6 +3,7 @@ const { setTokenCookie, requireAuth, restoreUser } = require('../../utils/auth')
 const { Song, User, Album, Playlist, Comment, PlaylistSong } = require('../../db/models');
 const { check } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
+const { requireOwner } = require('../../utils/ownership');
 
 const router = express.Router();
 
@@ -26,12 +27,13 @@ const validatePlaylist = [
     handleValidationErrors
 ];
 
-router.delete('/:playlistId/songs/:songId', requireAuth, async (req, res, next) => {
-    const {playlistId, songId} = req.params;
+router.delete('/:playlistId/songs/:songId', requireAuth, requireOwner(Playlist, 'playlistId'), async (req, res, next) => {
+    const playlist = res.locals.record;
+    const { songId } = req.params;
 
     const playlistSong = await PlaylistSong.findOne({
         where: {
-            playlistId: playlistId,
+            playlistId: playlist.id,
             songId: songId
         }
     });
@@ -45,7 +47,7 @@ router.delete('/:playlistId/songs/:songId', requireAuth, async (req, res, next) 
             statusCode: 200
         })
     }else {
-        playlistCouldNotBeFound(next)
+        songCouldNotBeFound(next)
     }
 })
 
@@ -198,7 +200,9 @@ router.post('/', requireAuth, validatePlaylist, async (req, res, next) => {
     }
 });
 
-router.get('/', requireAuth, async (req, res, next) => {
+// Public on purpose: the /playlists page is a "browse all playlists" page, like
+// GET /api/albums. A user's own playlists come from GET /api/my/playlists.
+router.get('/', async (req, res, next) => {
     const playlists = await Playlist.findAll();
 
     return res.json(playlists);
