@@ -2,16 +2,24 @@ const express = require('express');
 const { setTokenCookie, requireAuth, restoreUser } = require('../../utils/auth');
 const { Song, User, Album, Comment } = require('../../db/models');
 const { check } = require('express-validator');
-const { handleValidationErrors } = require('../../utils/validation');
+const { handleValidationErrors, validateIdParam } = require('../../utils/validation');
 const { pick } = require('../../utils/pick');
 const app = require('../../app');
 
 const router = express.Router();
+router.param('commentId', validateIdParam);
 
 const validateComment = [
     check('body')
-        .exists({ checkFalsey: true })
-        .withMessage('Comment body text is required'),
+        .exists({ checkFalsy: true })
+        .withMessage('Comment body text is required')
+        .bail()
+        .isString()
+        .trim()
+        .notEmpty()
+        .withMessage('Comment body text is required')
+        .isLength({ max: 256 })
+        .withMessage('Comment must be 256 characters or less.'),
     handleValidationErrors
 ];
 

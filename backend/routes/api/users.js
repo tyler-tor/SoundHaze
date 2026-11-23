@@ -11,13 +11,15 @@ const router = express.Router();
 
 const validateSignup = [
     check('email')
-        .exists({ checkFalsey: true })
+        .exists({ checkFalsy: true })
         .isEmail()
-        .withMessage('Please provide a valid email.'),
+        .withMessage('Please provide a valid email.')
+        .isLength({ max: 256 })
+        .withMessage('Email must be 256 characters or less.'),
     check('username')
         .exists({ checkFalsy: true })
-        .isLength({ min: 4 })
-        .withMessage('Please provide a username with at least 4 characters.'),
+        .isLength({ min: 4, max: 30 })
+        .withMessage('Username must be between 4 and 30 characters.'),
     check('username')
         .not()
         .isEmail()
@@ -26,6 +28,14 @@ const validateSignup = [
         .exists({ checkFalsy: true })
         .isLength({ min: 6 })
         .withMessage('Password must be 6 characters or more.'),
+    check('firstName')
+        .optional()
+        .isLength({ max: 30 })
+        .withMessage('First name must be 30 characters or less.'),
+    check('lastName')
+        .optional()
+        .isLength({ max: 30 })
+        .withMessage('Last name must be 30 characters or less.'),
     handleValidationErrors
 ];
 

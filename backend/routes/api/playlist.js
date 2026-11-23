@@ -2,11 +2,13 @@ const express = require('express');
 const { setTokenCookie, requireAuth, restoreUser } = require('../../utils/auth');
 const { Song, User, Album, Playlist, Comment, PlaylistSong } = require('../../db/models');
 const { check } = require('express-validator');
-const { handleValidationErrors } = require('../../utils/validation');
+const { handleValidationErrors, validateIdParam } = require('../../utils/validation');
 const { requireOwner } = require('../../utils/ownership');
 const { pick } = require('../../utils/pick');
 
 const router = express.Router();
+router.param('playlistId', validateIdParam);
+router.param('songId', validateIdParam);
 
 const playlistCouldNotBeFound = (next) => {
     const e = new Error();
@@ -23,8 +25,20 @@ const songCouldNotBeFound = (next) => {
 
 const validatePlaylist = [
     check('name')
-        .exists({ checkFalsey: true })
-        .withMessage('Playlist name is required'),
+        .exists({ checkFalsy: true })
+        .withMessage('Playlist name is required')
+        .bail()
+        .isString()
+        .trim()
+        .notEmpty()
+        .withMessage('Playlist name is required')
+        .isLength({ max: 30 })
+        .withMessage('Playlist name must be 30 characters or less.'),
+    check('imageUrl')
+        .optional()
+        .isString()
+        .isLength({ max: 256 })
+        .withMessage('Playlist imageUrl must be 256 characters or less.'),
     handleValidationErrors
 ];
 
@@ -52,7 +66,14 @@ router.delete('/:playlistId/songs/:songId', requireAuth, requireOwner(Playlist, 
     }
 })
 
-router.post('/:playlistId/songs', requireAuth, async (req, res, next) => {
+const validatePlaylistSong = [
+    check('songId')
+        .isInt({ min: 1 })
+        .withMessage('songId must be a positive integer.'),
+    handleValidationErrors
+];
+
+router.post('/:playlistId/songs', requireAuth, validatePlaylistSong, async (req, res, next) => {
     const { user } = req;
     const { playlistId } = req.params;
     const { songId } = req.body;

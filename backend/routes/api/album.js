@@ -2,7 +2,7 @@ const express = require('express');
 const { setTokenCookie, requireAuth, restoreUser } = require('../../utils/auth');
 const { Song, User, Album } = require('../../db/models');
 const { check } = require('express-validator');
-const { handleValidationErrors } = require('../../utils/validation');
+const { handleValidationErrors, validateIdParam } = require('../../utils/validation');
 const app = require('../../app');
 const user = require('../../db/models/user');
 const {singlePublicFileUpload, singleMulterUpload} = require('../../awsS3')
@@ -10,11 +10,22 @@ const { requireOwner } = require('../../utils/ownership');
 const { pick } = require('../../utils/pick');
 
 const router = express.Router();
+router.param('albumId', validateIdParam);
 
 const validateSong = [
     check('title')
-        .exists({ checkFalsey: true })
-        .withMessage('Song title is required.'),
+        .exists({ checkFalsy: true })
+        .withMessage('Song title is required.')
+        .bail()
+        .trim()
+        .notEmpty()
+        .withMessage('Song title is required.')
+        .isLength({ max: 30 })
+        .withMessage('Song title must be 30 characters or less.'),
+    check('description')
+        .optional()
+        .isLength({ max: 256 })
+        .withMessage('Song description must be 256 characters or less.'),
     // check('url')
     //     .exists({ checkFalsy: true })
     //     .withMessage('Audio is required'),
@@ -23,14 +34,35 @@ const validateSong = [
 
 const validateAlbum = [
     check('title')
-        .exists({ checkFalsey: true })
-        .withMessage('Album title is required.'),
+        .exists({ checkFalsy: true })
+        .withMessage('Album title is required.')
+        .bail()
+        .isString()
+        .trim()
+        .notEmpty()
+        .withMessage('Album title is required.')
+        .isLength({ max: 30 })
+        .withMessage('Album title must be 30 characters or less.'),
     check('description')
-        .exists({ checkFalsey: true })
-        .withMessage('Album description is required.'),
+        .exists({ checkFalsy: true })
+        .withMessage('Album description is required.')
+        .bail()
+        .isString()
+        .trim()
+        .notEmpty()
+        .withMessage('Album description is required.')
+        .isLength({ max: 256 })
+        .withMessage('Album description must be 256 characters or less.'),
     check('imageUrl')
-        .exists({ checkFalsey: true })
-        .withMessage('Album imageUrl is required.'),
+        .exists({ checkFalsy: true })
+        .withMessage('Album imageUrl is required.')
+        .bail()
+        .isString()
+        .trim()
+        .notEmpty()
+        .withMessage('Album imageUrl is required.')
+        .isLength({ max: 256 })
+        .withMessage('Album imageUrl must be 256 characters or less.'),
     handleValidationErrors
 ];
 

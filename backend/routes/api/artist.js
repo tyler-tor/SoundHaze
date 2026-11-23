@@ -2,9 +2,10 @@ const express = require('express');
 const { setTokenCookie, requireAuth, restoreUser } = require('../../utils/auth');
 const { Song, User, Album, sequelize } = require('../../db/models');
 const { check } = require('express-validator');
-const { handleValidationErrors } = require('../../utils/validation');
+const { handleValidationErrors, validateIdParam } = require('../../utils/validation');
 
 const router = express.Router();
+router.param('artistId', validateIdParam);
 
 const artistCouldNotBeFound = (next) => {
     const e = new Error();

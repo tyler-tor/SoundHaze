@@ -2,18 +2,52 @@ const express = require('express');
 const { setTokenCookie, requireAuth, restoreUser } = require('../../utils/auth');
 const { Song, User, Album, Comment } = require('../../db/models');
 const { check, query, condition } = require('express-validator');
-const { handleValidationErrors } = require('../../utils/validation');
+const { handleValidationErrors, validateIdParam } = require('../../utils/validation');
 const { requireOwner } = require('../../utils/ownership');
 const { pick } = require('../../utils/pick');
 const app = require('../../app');
 const song = require('../../db/models/song');
 
 const router = express.Router();
+router.param('songId', validateIdParam);
 
 const validateComment = [
     check('body')
-        .exists({ checkFalsey: true })
-        .withMessage('Comment body text is required'),
+        .exists({ checkFalsy: true })
+        .withMessage('Comment body text is required')
+        .bail()
+        .isString()
+        .trim()
+        .notEmpty()
+        .withMessage('Comment body text is required')
+        .isLength({ max: 256 })
+        .withMessage('Comment must be 256 characters or less.'),
+    handleValidationErrors
+];
+
+// Fields are optional on update, but if sent they must be valid.
+const validateSongUpdate = [
+    check('title')
+        .optional()
+        .isString()
+        .trim()
+        .notEmpty()
+        .withMessage('Song title cannot be empty.')
+        .isLength({ max: 30 })
+        .withMessage('Song title must be 30 characters or less.'),
+    check('description')
+        .optional()
+        .isString()
+        .isLength({ max: 256 })
+        .withMessage('Song description must be 256 characters or less.'),
+    check('previewImage')
+        .optional()
+        .isString()
+        .trim()
+        .notEmpty()
+        .withMessage('Song image cannot be empty.')
+        .isLength({ max: 255 })
+        .withMessage('Song image URL must be 255 characters or less.'),
     handleValidationErrors
 ];
 
@@ -96,7 +130,7 @@ router.get('/:songId/comments', async(req, res, next) => {
     }
 })
 
-router.put('/:songId', requireAuth, requireOwner(Song, 'songId'), async (req, res, next) => {
+router.put('/:songId', requireAuth, requireOwner(Song, 'songId'), validateSongUpdate, async (req, res, next) => {
     const song = res.locals.record;
 
     // Only these fields can be edited. previewImage is included because the

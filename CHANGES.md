@@ -80,3 +80,30 @@ _Done first (as the plan's "Recommended order" says) so the frontend could be bu
   - In the UI: edit an album and change the image URL; the new image now shows (it did not before).
 - **Things to watch / follow-ups:** If you add a new editable column later, you must add it to the allow-list or the update will silently ignore it. That is the intended safe default. See "Deviations from plan" for why songs allow `previewImage` and why `imageUrl` is accepted.
 
+## S4 — Fix the validation middleware
+- **Problem:**
+  1. `handleValidationErrors` called `next(err)` and then fell through to `next()` again. Express then ran the route handler anyway, so invalid data could still be saved.
+  2. Eight validators used `exists({ checkFalsey: true })` (typo; the option is `checkFalsy`). express-validator silently ignores unknown options, so an empty string `""` passed as "exists". Confirmed before the fix: `POST /api/playlists` with `{"name":""}` returned `201` and created a playlist with an empty name.
+  3. No length limits. The DB columns are e.g. `STRING(30)` for titles/names; SQLite ignores that, but Postgres throws, which became a `500` instead of a helpful `400`.
+  4. URL ids like `/api/songs/abc` went straight to the database.
+- **What changed:**
+  - `handleValidationErrors` now does `return next(err)` and `return next()`.
+  - All `checkFalsey` typos fixed. Text fields are also `.trim()`ed and must be non-empty, so `"   "` is rejected too.
+  - Length limits that match the migrations: song title 30, song description 256, album title 30 / description 256 / imageUrl 256, playlist name 30 / imageUrl 256, comment body 256, username 4 to 30, email 256, first/last name 30, song image 255.
+  - New validator for `PUT /api/songs/:id` (it had none): fields are optional, but if sent they must be valid.
+  - `POST /api/playlists/:id/songs` now requires `songId` to be a positive integer.
+  - New `validateIdParam` in `utils/validation.js`, attached with `router.param('songId', validateIdParam)` (and `albumId`, `playlistId`, `commentId`, `artistId`). `router.param` runs automatically for every route in that router that has that URL param, so ids must be positive integers or you get a `400`.
+- **Files:** `backend/utils/validation.js`, `backend/routes/api/songs.js`, `album.js`, `playlist.js`, `comment.js`, `artist.js`, `users.js`
+- **How to verify** (all verified with curl; each returned `400` with a clear message in `errors`):
+  - `POST /api/playlists` with `{"name":""}`, `{"name":"   "}` or a 31-character name.
+  - `POST /api/songs/1/comments` with `{"body":""}`.
+  - `GET /api/songs/abc`, `GET /api/artists/1x`.
+  - As the owner: `PUT /api/songs/1` with `{"title":""}` or a 31-character title.
+  - `POST /api/albums` with an empty `description`.
+  - `POST /api/playlists/1/songs` with `{"songId":"abc"}`.
+  - Valid requests still work (`201` for a new playlist, `200` adding song 5 to playlist 1). The server log shows only one `INSERT INTO Playlists` (the valid one), proving the handler no longer runs after a validation error.
+- **Things to watch / follow-ups:**
+  - Song list query params (`page`, `size`) are validated as part of S11.
+  - Validation for the multipart routes (signup, create song) runs after multer has parsed the file. S8 adds file size/type limits.
+  - `express-validator` 6 → 7 (S16) changes some APIs; these validators use only basic chain methods that exist in v7 too.
+
