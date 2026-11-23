@@ -74,10 +74,17 @@ const albumCouldNotBeFound = (next) => {
 }
 
 // Ownership is checked BEFORE multer/S3 so a non-owner's file is never uploaded.
-router.post('/:albumId/songs', requireAuth, requireOwner(Album, 'albumId'), singleMulterUpload('url'), validateSong, async(req, res, next) => {
+router.post('/:albumId/songs', requireAuth, requireOwner(Album, 'albumId'), singleMulterUpload('url', 'audio'), validateSong, async(req, res, next) => {
     const { user } = req;
     const album = res.locals.record;
     const { title, description } = req.body;
+    if (!req.file) {
+        const err = new Error('Audio file is required.');
+        err.title = 'Bad request.';
+        err.errors = ['Audio file is required.'];
+        err.status = 400;
+        return next(err);
+    }
     const url = await singlePublicFileUpload(req.file);
 
     const song = await Song.create({

@@ -150,3 +150,32 @@ _Done first (as the plan's "Recommended order" says) so the frontend could be bu
   - If the image upload succeeds but the user insert then fails (e.g. duplicate username), the uploaded image is left orphaned in S3. Rare and harmless; could be fixed later by checking for duplicates before uploading.
   - With the frontend on S3/CloudFront and the API elsewhere, `/default-avatar.svg` still resolves against the frontend's own domain, which is where the file lives.
 
+## S8 — Harden uploads (limits, types, keys, ACL)
+- **Problem:**
+  - No file-size limits. multer's `memoryStorage` keeps the whole file in RAM, so one huge upload could exhaust the server's memory (and your S3 bill).
+  - No file-type checks: any file could be uploaded as a "song" or "image".
+  - Object keys were `Date.now()` + extension. Two uploads in the same millisecond get the same key, and the second silently overwrites the first.
+  - Every upload set `ACL: "public-read"`. New S3 buckets have "Object Ownership: Bucket owner enforced" on by default, which **rejects** any upload that sets an ACL, so uploads would fail on a fresh bucket.
+  - `express.json` / `urlencoded` accepted 50 MB bodies, though the API's JSON bodies are tiny.
+  - Missing files caused crashes (500) instead of clear errors.
+- **What changed** (`backend/awsS3.js` was reorganised around one `uploadToS3` helper):
+  - Upload rules per kind: **audio** up to 20 MB, `audio/mpeg`, `audio/mp4`, `audio/x-m4a`; **image** up to 5 MB, `image/jpeg`, `image/png`, `image/webp`. `singleMulterUpload(field, kind)` now takes `"audio"` or `"image"` (default `"image"`). Also limits: 1 file per request, 20 text fields, 100 KB per field.
+  - multer errors are translated into normal API errors: too big → **413** "File is too large. The limit is N MB."; wrong type → **415** "Unsupported file type. Please upload a ...".
+  - Keys are now `audio/<uuid>.<ext>` or `images/<uuid>.<ext>` using `crypto.randomUUID()`. `ContentType` is set on the S3 object so browsers play/show it correctly.
+  - `ACL: "public-read"` removed.
+  - `POST /api/albums/:id/songs` returns **400** "Audio file is required." and `POST /api/images/upload` returns **400** "Image file is required." when no file is sent.
+  - `express.json` and `express.urlencoded` limits lowered from 50 MB to 100 KB (larger bodies → **413**).
+- **Files:** `backend/awsS3.js`, `backend/app.js`, `backend/routes/api/album.js`, `backend/routes/api/images.js`, `backend/routes/api/users.js`
+- **How to verify** (verified with curl; S3 itself was not reachable from the sandbox):
+  - `POST /api/images/upload` with no file → 400; with a `.txt` (`text/plain`) → 415; with a 6 MB PNG → 413.
+  - As `Los Lonley Boys`: `POST /api/albums/1/songs` with no file → 400; with a PNG → 415; with a 21 MB MP3 → 413.
+  - Signup with a `.txt` image → 415; signup without an image → 200.
+  - A 200 KB JSON body to `POST /api/playlists` → 413.
+  - A valid small PNG gets past all checks and reaches S3 (fails here with "Missing credentials", as expected without AWS keys).
+  - Key format checked by stubbing `s3.upload` in Node: `audio/6b9c42fc-....mp3` and `images/9594....png`, no `ACL`, correct `ContentType`.
+  - **Still to test with your real bucket:** upload a real MP3/M4A song and a JPEG/PNG image from the UI.
+- **Things to watch / follow-ups:**
+  - **Important:** without the ACL, new files are only publicly readable if the bucket has a bucket policy allowing public `s3:GetObject` (or, later, CloudFront in S43). If your existing `soundcloud-bucket` relied on per-object ACLs, new uploads will upload fine but return 403 when played until you add such a policy. See "Open questions".
+  - The MIME type comes from the browser, so it is a guard against mistakes and casual abuse, not proof of the content. Some systems report MP3s as `audio/mp3`; if a real MP3 is rejected with 415, add `audio/mp3` to `UPLOAD_RULES.audio.mimeTypes`.
+  - The frontend does not yet show these upload errors nicely or set `accept=` on file inputs (UI items S32/S33). AWS SDK v3 is S18.
+

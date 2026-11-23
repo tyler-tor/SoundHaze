@@ -16,8 +16,10 @@ const app = express();
 
 app.use(morgan('dev'));
 app.use(cookieParser());
-app.use(express.urlencoded({ extended: false, limit: '50mb' }));
-app.use(express.json({ limit: '50mb' }));
+// Small body limits: JSON/form bodies here are tiny. File uploads are
+// multipart and handled (with their own size limits) by multer in awsS3.js.
+app.use(express.urlencoded({ extended: false, limit: '100kb' }));
+app.use(express.json({ limit: '100kb' }));
 
 //Security Middleware
 if (!isProduction) {

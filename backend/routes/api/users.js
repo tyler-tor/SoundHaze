@@ -40,7 +40,7 @@ const validateSignup = [
     handleValidationErrors
 ];
 
-router.post('/signup', singleMulterUpload('image'), validateSignup, async(req, res, next) => {
+router.post('/signup', singleMulterUpload('image', 'image'), validateSignup, async(req, res, next) => {
     const { email, password, username, firstName, lastName } = req.body;
     try{
         // The profile image is optional. Without one, previewImage stays null
