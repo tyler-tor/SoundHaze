@@ -33,6 +33,8 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S20 (before S38):** the plan lists S38 as a prerequisite; it is not in this batch, so S20 was done on the current server (which still serves the build in production). The CSRF flow does not depend on who serves `index.html`, so it will keep working after S38.
 - **S20 (token delivery):** instead of a JavaScript-readable `XSRF-TOKEN` cookie, `GET /api/csrf/restore` returns the token in its JSON body (`{ csrfToken }`) and the frontend keeps it in memory; only the httpOnly hash cookie is set. The header is now `X-CSRF-Token` (was `XSRF-Token`). `js-cookie` is no longer needed and was removed from the frontend.
 - **S20 (extras):** the token is bound to the login cookie (csrf-csrf requires a "session identifier"), so the frontend fetches a new token after login/signup/logout, and `csrfFetch` retries a request **once** with a fresh token if the server answers "Invalid CSRF token" (e.g. after the login cookie expires). Restore responds `200` (was `201`).
+- **S21 (test packages removed):** `@testing-library/*` were removed together with `react-scripts`, because `react-scripts test` was their only runner and there are no test files. Frontend tests come back with Vitest in S48. `"type": "module"` was added to `frontend/package.json` (Vite's config is ESM).
+- **S21 (backend path):** the backend's production static-file path changed from `frontend/build` to `frontend/dist` in `backend/routes/index.js` (needed so `NODE_ENV=production` keeps serving the app until S38 removes that code).
 
 ## Open questions for Tyler
 
@@ -440,3 +442,26 @@ _New item (not in the original plan), done first at Tyler's request._
 - **Things to watch / follow-ups:**
   - Anything that calls the API outside `csrfFetch` (curl, Postman, a future mobile app) must first `GET /api/csrf/restore` with a cookie jar and send `X-CSRF-Token`.
   - In production the CSRF cookie requires HTTPS (`Secure`). Behind CloudFront that is the case; testing a production build over plain `http://` will fail with 403.
+
+## S21 — Create React App to Vite
+- **Problem:** Create React App (`react-scripts`) was officially deprecated in February 2025 and caused about 75 of the 79 frontend `npm audit` findings. It is also slow to start and build.
+- **What changed:**
+  - Removed `react-scripts` (and the `@testing-library/*` packages that only ran under it). Added `vite` 8 and `@vitejs/plugin-react` 6 as dev dependencies.
+  - New `frontend/vite.config.js`: React plugin; dev server on port **3000** with `server.proxy` sending `/api` to the backend (replaces CRA's `"proxy"` field); build output folder **`dist/`**.
+  - The proxy target can be changed with `VITE_BACKEND_URL` (e.g. in `frontend/.env.local`); default `http://localhost:5000`.
+  - `public/index.html` moved to `frontend/index.html` (Vite's entry point), `%PUBLIC_URL%` removed, and `<script type="module" src="/src/index.jsx">` added. Files in `public/` (manifest, `default-avatar.svg`, `images/`) are still copied as-is.
+  - The 40 `.js` files that contain JSX were renamed to `.jsx` (found by parsing every file; plain modules such as `store/*.js` and the `components/*/index.js` re-export files stay `.js`). Imports did not need to change.
+  - `process.env.NODE_ENV` → `import.meta.env.DEV` (`src/index.jsx`) and `import.meta.env.PROD` (`src/store/index.js`). `require('redux-logger')` (CommonJS, not allowed by Vite) became a normal `import` (removed entirely in S24). No `REACT_APP_*` variables existed.
+  - `frontend/package.json`: scripts `dev` / `start` (both run `vite`), `build` (`vite build`), `preview` (serves `dist/` locally); `"type": "module"`; removed the CRA-only `eslintConfig`, `browserslist` and `proxy` fields. The root `dev:frontend` script now runs `npm run dev`.
+  - Backend: production static files are served from `frontend/dist` (was `frontend/build`). `.gitignore` ignores `dist`.
+- **Files:** `frontend/package.json`, `frontend/package-lock.json`, `frontend/vite.config.js` (new), `frontend/index.html` (moved from `public/`), 40 renames `frontend/src/**/*.js` → `*.jsx`, `frontend/src/index.jsx`, `frontend/src/store/index.js`, `backend/routes/index.js`, `package.json`, `.gitignore`
+- **How to verify** (verified):
+  - `cd frontend && npm run build` → `dist/index.html`, `dist/assets/index-*.js` (81 KB gzipped, was 83 KB with CRA), CSS 2.2 KB gzipped; built in under a second.
+  - Dev server (`npm run dev`) with the backend running: `/` returns the page with the `src/index.jsx` module, `/src/App.jsx` compiles, and through the proxy `GET /api/csrf/restore`, demo login and `GET /api/my` (returns `Demo-lition`) work, so cookies flow through the proxy. `/albums/1` returns the app (SPA fallback).
+  - Production mode backend serves `dist/index.html` at `/` and `/songs`, the hashed JS from `/assets/`, and `/default-avatar.svg`; `/api/nope` stays a JSON 404.
+  - **Not tested in a real browser** (no browser in this session): open http://localhost:3000, click Demo, browse songs/albums/playlists, play a song.
+- **Things to watch / follow-ups:**
+  - **New commands:** `npm run dev` (or `npm start`) in `frontend/` starts Vite on http://localhost:3000. The build is in `frontend/dist/`, not `build/`. Your old `frontend/build/` folder (git-ignored) can be deleted.
+  - Env vars for browser code must start with `VITE_` and are read as `import.meta.env.VITE_...`.
+  - Vite does not run ESLint during builds (CRA did). Linting comes with S47.
+  - The Font Awesome kit `<script>` in `index.html` is unchanged.

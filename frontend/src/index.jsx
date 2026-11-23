@@ -17,7 +17,7 @@ restoreCSRF().catch(() => {
   // csrfFetch will try again before the first POST/PUT/DELETE.
 });
 
-if (process.env.NODE_ENV !== 'production') {
+if (import.meta.env.DEV) {
   window.csrfFetch = csrfFetch;
   window.store = store;
   window.sessionActions = sessionActions;

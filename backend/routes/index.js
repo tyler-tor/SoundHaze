@@ -18,11 +18,12 @@ if (process.env.NODE_ENV === 'production') {
   // Serve the frontend's index.html file at the root route
   router.get('/', (req, res) => {
     res.sendFile(
-      path.resolve(__dirname, '../../frontend', 'build', 'index.html')
+      path.resolve(__dirname, '../../frontend', 'dist', 'index.html')
     );
   });
-  // Serve the static assets in the frontend's build folder
-  router.use(express.static(path.resolve("../frontend/build")));
+  // Serve the static assets in the frontend's dist folder
+  // Vite builds into frontend/dist (S21; CRA used frontend/build).
+  router.use(express.static(path.resolve(__dirname, "../../frontend/dist")));
   // Serve the frontend's index.html file at all other routes NOT starting with /api.
   // Express 5 path syntax: "/{*splat}" matches any path (the old regex route
   // is not supported the same way). Unknown /api paths fall through to the
@@ -30,7 +31,7 @@ if (process.env.NODE_ENV === 'production') {
   router.get('/{*splat}', (req, res, next) => {
     if (req.path === '/api' || req.path.startsWith('/api/')) return next();
     res.sendFile(
-      path.resolve(__dirname, '../../frontend', 'build', 'index.html')
+      path.resolve(__dirname, '../../frontend', 'dist', 'index.html')
     );
   });
 }
