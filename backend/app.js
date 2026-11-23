@@ -14,6 +14,14 @@ const { handleValidationErrors, forbiddenErr } = require('./utils/validation');
 
 const app = express();
 
+// Behind a proxy (CloudFront, a load balancer, nginx) the client's real IP is
+// in X-Forwarded-For. Trust exactly one proxy hop in production so
+// req.ip (used by the rate limiter) is the real client IP. Not set in
+// development, where there is no proxy and the header could be faked.
+if (isProduction) {
+    app.set('trust proxy', 1);
+}
+
 app.use(morgan('dev'));
 app.use(cookieParser());
 // Small body limits: JSON/form bodies here are tiny. File uploads are
@@ -27,10 +35,30 @@ if (!isProduction) {
     app.use(cors());
 };
 
-//helmet helps set a variety of headers to better secure your app
+//helmet sets a variety of security headers (HSTS, X-Content-Type-Options,
+//X-Frame-Options, Referrer-Policy, Content-Security-Policy, ...)
 app.use(
-    helmet.crossOriginResourcePolicy({
-        policy: 'cross-origin'
+    helmet({
+        // Allow other origins (e.g. the frontend on S3/CloudFront) to load
+        // resources served by this API.
+        crossOriginResourcePolicy: { policy: 'cross-origin' },
+        // helmet 5 turns COEP on by default. It would block the S3 images
+        // and audio (S3 does not send Cross-Origin-Resource-Policy headers).
+        // helmet 7+ has it off by default.
+        crossOriginEmbedderPolicy: false,
+        // The CSP mainly matters for the React build that Express serves in
+        // production (routes/index.js). Extend helmet's defaults with what
+        // the app actually loads: the Font Awesome kit, images and audio
+        // from S3 (any https URL), and the player's blob: media.
+        contentSecurityPolicy: {
+            directives: {
+                'script-src': ["'self'", 'https://kit.fontawesome.com'],
+                'connect-src': ["'self'", 'https://ka-f.fontawesome.com'],
+                'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+                'media-src': ["'self'", 'blob:', 'https:'],
+                'font-src': ["'self'", 'data:', 'https:']
+            }
+        }
     })
 );
 

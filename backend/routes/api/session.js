@@ -3,6 +3,7 @@ const { setTokenCookie, restoreUser, requireAuth } = require('../../utils/auth')
 const { User, Song } = require('../../db/models');
 const { check } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
+const { loginLimiter } = require('../../utils/rateLimit');
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ const validateLogin = [
 ];
 
 
-router.post('/login', validateLogin, async (req, res, next) => {
+router.post('/login', loginLimiter, validateLogin, async (req, res, next) => {
     const { credential, password } = req.body;
 
     const user = await User.login({ credential, password });

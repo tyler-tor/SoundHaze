@@ -4,6 +4,7 @@ const { User } = require('../../db/models');
 const { UniqueConstraintError } = require('sequelize');
 const { check } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
+const { signupLimiter } = require('../../utils/rateLimit');
 const {singlePublicFileUpload, singleMulterUpload} = require('../../awsS3');
 const app = require('../../app');
 const { route } = require('./my');
@@ -40,7 +41,7 @@ const validateSignup = [
     handleValidationErrors
 ];
 
-router.post('/signup', singleMulterUpload('image', 'image'), validateSignup, async(req, res, next) => {
+router.post('/signup', signupLimiter, singleMulterUpload('image', 'image'), validateSignup, async(req, res, next) => {
     const { email, password, username, firstName, lastName } = req.body;
     try{
         // The profile image is optional. Without one, previewImage stays null

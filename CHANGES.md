@@ -8,6 +8,9 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S3 (song fields):** the plan's allow-list for songs was `title`, `description`. I also allowed `previewImage`, because the existing Update Song form lets the owner change the song's cover image and leaving it out would silently break that feature.
 - **S3 (album/playlist image field name):** the frontend sends the new image as `imageUrl` (the create routes use that name too), not `previewImage`. The update routes now accept `imageUrl` as an alias that is saved into `previewImage`. Side effect: changing an album/playlist image from the edit form now actually works (before, the `...album` spread in the form re-sent the **old** `previewImage`, and `imageUrl` was ignored because there is no such column).
 - **S6 (album page):** the plan only named the playlist page, but the album detail page (`DisplayAlbumInfo.js`) also printed the artist's email. Removed it there too (it would have rendered empty after the API change anyway).
+- **S9 (before S17):** the plan suggests doing S9 together with the helmet 5 → 8 upgrade (S17). S17 is not in this batch, so S9 was done on helmet 5. Two helmet-5-specific adjustments: `crossOriginEmbedderPolicy` is turned **off** (helmet 5 enables it by default and it would block S3 images/audio; helmet 7+ has it off by default), and the Content-Security-Policy was extended to allow the Font Awesome kit plus https images/audio. When S17 is done, re-check these options.
+- **S9 (trust proxy):** `app.set('trust proxy', 1)` is applied **only in production**. In development there is no proxy, and trusting `X-Forwarded-For` there would let anyone fake their IP to dodge the rate limiter.
+- **S9 (separate counters):** login and signup each have their **own** 10/min counter, so failed logins do not block signups (and vice versa).
 
 ## Open questions for Tyler
 
@@ -178,4 +181,21 @@ _Done first (as the plan's "Recommended order" says) so the frontend could be bu
   - **Important:** without the ACL, new files are only publicly readable if the bucket has a bucket policy allowing public `s3:GetObject` (or, later, CloudFront in S43). If your existing `soundcloud-bucket` relied on per-object ACLs, new uploads will upload fine but return 403 when played until you add such a policy. See "Open questions".
   - The MIME type comes from the browser, so it is a guard against mistakes and casual abuse, not proof of the content. Some systems report MP3s as `audio/mp3`; if a real MP3 is rejected with 415, add `audio/mp3` to `UPLOAD_RULES.audio.mimeTypes`.
   - The frontend does not yet show these upload errors nicely or set `accept=` on file inputs (UI items S32/S33). AWS SDK v3 is S18.
+
+## S9 — Full security headers and rate limiting
+- **Problem:** Only one helmet header was enabled (`Cross-Origin-Resource-Policy`), so responses lacked HSTS, `X-Content-Type-Options: nosniff`, frame protection (clickjacking), `Referrer-Policy`, a Content-Security-Policy, etc. Login and signup had no rate limiting, so a script could guess passwords or create accounts as fast as the server could answer.
+- **What changed:**
+  - `helmet()` with its defaults, plus: `crossOriginResourcePolicy: cross-origin` (kept), `crossOriginEmbedderPolicy: false` (see Deviations), and a CSP based on helmet's defaults that also allows `https://kit.fontawesome.com` scripts, `https://ka-f.fontawesome.com` connections, and images/audio/fonts from any `https:` URL (S3) plus `data:`/`blob:`.
+  - New `backend/utils/rateLimit.js` using the `express-rate-limit` package (v8): **10 requests per minute per IP**, separately for `POST /api/session/login` and `POST /api/users/signup`. Over the limit → `429` with `errors: ["Too many attempts. Please wait a minute and try again."]` (same JSON shape as other errors, so the forms can display it). Standard `RateLimit` headers are sent.
+  - `app.set('trust proxy', 1)` in production, so `req.ip` is the real client IP behind CloudFront/a load balancer (one proxy hop).
+- **Files:** `backend/app.js`, `backend/utils/rateLimit.js` (new), `backend/routes/api/session.js`, `backend/routes/api/users.js`, `backend/package.json`, `backend/package-lock.json`
+- **How to verify** (verified with curl):
+  - `curl -I http://localhost:5000/api/songs/1` shows `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: no-referrer`, `Content-Security-Policy: ...`, and **no** `Cross-Origin-Embedder-Policy`.
+  - Send 11 wrong-password logins within a minute: the first 10 → `401`, the 11th → `429`. A correct password during that minute is also `429` (the limit counts all attempts). Signup from the same IP still works (`200`), since it has its own counter.
+  - Wait a minute (or restart the server; counters are in memory) and login works again.
+- **Things to watch / follow-ups:**
+  - **Not tested in a browser:** the CSP only affects the HTML page Express serves in production mode (`NODE_ENV=production`, which needs Postgres, so it was not run here). After deploying, open the browser dev-tools console and look for "Refused to load ... Content-Security-Policy" messages. If something is blocked, add its origin to the matching directive in `app.js`. Once the frontend moves to S3/CloudFront (S21/S43), its CSP should be set there instead.
+  - The demo-login button counts toward the login limit (10/min per IP). Fine for real users; if a whole classroom shares one IP, raise the limit.
+  - Counters live in memory: they reset on restart and are not shared between multiple server processes. For more than one server, use a shared store (e.g. Redis).
+  - Revisit options when upgrading helmet (S17).
 
