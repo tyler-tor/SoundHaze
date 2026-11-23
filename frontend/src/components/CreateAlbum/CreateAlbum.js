@@ -4,6 +4,7 @@ import { useHistory } from "react-router-dom";
 import { createAlbum } from "../../store/albums";
 import ImageComponent from "../ImageComponent";
 import './createalbum.css';
+import { getErrorMessages } from "../../store/csrf";
 
 
 const CreateAlbum = ({ setShowModal }) => {
@@ -23,13 +24,13 @@ const CreateAlbum = ({ setShowModal }) => {
             description,
             imageUrl: url
         }
-        return dispatch(createAlbum(data))
-            .then(() => setShowModal(false),
-            history.push('/albums'))
-            .catch(
-                async (response) => {
-                    if (response && response.errors) setErrors(response.errors);
-                });
+        try {
+            await dispatch(createAlbum(data));
+            setShowModal(false);
+            history.push('/albums');
+        } catch (response) {
+            setErrors(await getErrorMessages(response));
+        }
 
     };
 

@@ -18,7 +18,7 @@ function DisplayPlaylistInfo() {
 
     useEffect(() => {
         dispatch(showPlaylist(playlistId));
-    }, []);
+    }, [dispatch, playlistId]);
 
     const playSongBtn = useCallback(
         (song) => {
@@ -28,11 +28,11 @@ function DisplayPlaylistInfo() {
     );
 
     const checkValidation = (playlist) => {
-        if (user.id === playlist.userId) {
+        if (user?.id === playlist.userId) {
             return (
                 <div className="ind-song-actions">
-                    <UpdatePlaylistModal playlist={playlist} userId={user.id} />
-                    <DeletePlaylist playlist={playlist} userId={user.id} />
+                    <UpdatePlaylistModal playlist={playlist} userId={user?.id} />
+                    <DeletePlaylist playlist={playlist} userId={user?.id} />
                 </div>
             )
         }
@@ -77,7 +77,7 @@ function DisplayPlaylistInfo() {
                                     </strong>
                                 </div>
                                 <div className="ip-song-actions">
-                                    {(playlist.userId === user.id) && (
+                                    {(playlist.userId === user?.id) && (
                                         <DeletePlaylistSongModal songId={song.id} playlistId={playlist.id} />
                                     )}
                                     <HiPlay className="play-btn"

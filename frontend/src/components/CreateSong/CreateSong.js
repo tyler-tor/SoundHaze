@@ -3,6 +3,7 @@ import { useDispatch, useSelector} from "react-redux";
 import { useHistory } from "react-router-dom";
 import { createAddSong } from "../../store/songs";
 import './createsong.css';
+import { getErrorMessages } from "../../store/csrf";
 
 const CreateSong = ({ albumId, setShowModal }) => {
     const dispatch = useDispatch();
@@ -26,17 +27,17 @@ const CreateSong = ({ albumId, setShowModal }) => {
                 url: audioUrl,
                 albumId: albumIdState
             }
-            await dispatch(createAddSong(data))
-                .then(() => setShowModal(false), history.push('/songs'))
-                .catch(
-                    async (response) => {
-                        if (response && response.errors) setErrors(response.errors);
-                    });
-
-            setTitle("");
-            setAudioUrl("");
-            setDescription("");
-            setErrors([]);
+            try {
+                await dispatch(createAddSong(data));
+                // Only close and navigate once the song was actually created.
+                setTitle("");
+                setAudioUrl("");
+                setDescription("");
+                setShowModal(false);
+                history.push('/songs');
+            } catch (response) {
+                setErrors(await getErrorMessages(response));
+            }
         }
     };
 

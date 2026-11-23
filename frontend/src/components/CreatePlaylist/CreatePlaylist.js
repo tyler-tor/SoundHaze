@@ -4,6 +4,7 @@ import { useHistory } from 'react-router-dom';
 import { createPlaylist } from '../../store/playlists';
 import ImageComponent from '../ImageComponent';
 import './CreatePlaylist.css';
+import { getErrorMessages } from "../../store/csrf";
 
 function CreatePlaylist({ setShowModal }) {
   const dispatch = useDispatch();
@@ -26,7 +27,7 @@ function CreatePlaylist({ setShowModal }) {
         setShowModal(false)
         history.push('/playlists');
       }).catch(async (response) => {
-        if (response && response.errors) setErrors(response.errors);
+        setErrors(await getErrorMessages(response));
       })
   }
   return (

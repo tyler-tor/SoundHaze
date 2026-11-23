@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { updatePlaylist } from '../../store/playlists';
 import './Playlists.css'
+import { getErrorMessages } from "../../store/csrf";
 
 function UpdatePlaylist({ playlist, setShowModal }) {
   const dispatch = useDispatch();
@@ -28,7 +29,7 @@ function UpdatePlaylist({ playlist, setShowModal }) {
         setShowModal(false)
         history.push('/playlists')
       }).catch(async (response) => {
-        if (response && response.errors) setErrors(response.errors);
+        setErrors(await getErrorMessages(response));
       })
 
   }

@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux";
 import { useHistory } from "react-router-dom";
 import { updateSong } from "../../store/songs";
 import './updatesong.css';
+import { getErrorMessages } from "../../store/csrf";
 
 const UpdateSong = ({ song, setShowModal }) => {
     const dispatch = useDispatch();
@@ -25,12 +26,13 @@ const UpdateSong = ({ song, setShowModal }) => {
             url,
             previewImage: imageUrl
         }
-        await dispatch(updateSong(data))
-            .then(() => setShowModal(false), history.push('/songs'))
-            .catch(
-                async (response) => {
-                    if (response && response.errors) setErrors(response.errors);
-                });
+        try {
+            await dispatch(updateSong(data));
+            setShowModal(false);
+            history.push('/songs');
+        } catch (response) {
+            setErrors(await getErrorMessages(response));
+        }
     };
 
     return (

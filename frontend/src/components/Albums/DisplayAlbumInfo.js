@@ -21,7 +21,7 @@ const DisplayAlbumInfo = () => {
 
     useEffect(() => {
         dispatch(showAlbum(parseInt(albumId)));
-    }, []);
+    }, [dispatch, albumId]);
 
     const playSongBtn = useCallback(
         (song) => {
@@ -31,15 +31,15 @@ const DisplayAlbumInfo = () => {
     );
 
     const checkValidation = (album) => {
-        if (user.id === album.userId) {
+        if (user?.id === album.userId) {
             return (
                 <div className="ind-song-actions">
                     <CreateSongModal album={album}
-                        userId={user.id} />
+                        userId={user?.id} />
                     <UpdateAlbumModal album={album}
-                        userId={user.id} />
+                        userId={user?.id} />
                     <DeleteAlbum album={album}
-                        userId={user.id} />
+                        userId={user?.id} />
                 </div>
             )
         }
@@ -51,15 +51,15 @@ const DisplayAlbumInfo = () => {
                 <AddSongModal
                     songId={song.id}
                 />
-                {(user.id === song.userId) && (
+                {(user?.id === song.userId) && (
                     <>
                         <DeleteSong
                             song={song}
-                            userId={user.id}
+                            userId={user?.id}
                         />
                         <UpdateSongModal
                             song={song}
-                            userId={user.id} />
+                            userId={user?.id} />
                     </>
                 )}
             </div>

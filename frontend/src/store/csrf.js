@@ -26,3 +26,20 @@ export async function csrfFetch(url, options = {}) {
 export function restoreCSRF() {
     return csrfFetch('/api/csrf/restore');
 };
+
+// Turn a failed request into a list of messages to show the user.
+// csrfFetch throws the fetch Response for any status >= 400, and the API
+// sends errors as { title, message, errors: [...] }.
+export async function getErrorMessages(res) {
+    if (res && typeof res.json === 'function') {
+        try {
+            const data = await res.json();
+            if (data && Array.isArray(data.errors) && data.errors.length) return data.errors;
+            if (data && data.message) return [data.message];
+        } catch (e) {
+            // body was not JSON; fall through to the generic message
+        }
+        return [`Request failed (${res.status}). Please try again.`];
+    }
+    return ['Something went wrong. Please check your connection and try again.'];
+}

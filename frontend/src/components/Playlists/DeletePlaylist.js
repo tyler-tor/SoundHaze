@@ -1,21 +1,24 @@
 import React from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { deletePlaylist } from '../../store/playlists';
 import { useHistory } from 'react-router-dom';
-import { getSongs } from '../../store/songs';
+import { getErrorMessages } from '../../store/csrf';
 
 function DeletePlaylist({ playlist, userId }) {
     const dispatch = useDispatch();
     const history = useHistory();
-    const playlistState = useSelector((state) => state.playlists.currentPlaylist[playlist.id]);
 
     const handleClick = async (e) => {
-        // e.preventDefault();
         if(playlist.userId === userId){
-            dispatch(deletePlaylist(playlistState.id))
-            .then(dispatch(getSongs()))
-            .then(history.push('/playlists'))
-            window.alert('Successfully deleted! Now create another!');
+            try {
+                // playlist.id comes from props; the old code read it from
+                // currentPlaylist, which is empty on the /playlists list page.
+                await dispatch(deletePlaylist(playlist.id));
+                history.push('/playlists');
+                window.alert('Successfully deleted! Now create another!');
+            } catch (response) {
+                window.alert((await getErrorMessages(response)).join('\n'));
+            }
         }else {
             window.alert('You are not authorized to delete this playlist!');
         }

@@ -22,12 +22,12 @@ function Playlists() {
     };
 
     const checkValidation = (playlist) => {
-        if (user.id === playlist.userId) {
+        if (user?.id === playlist.userId) {
             return (
                 <div className='ind-playlist-actions'>
-                    {/* <AddSongModal playlist={playlist} userId={user.id} /> */}
-                    <UpdatePlaylistModal playlist={playlist} userId={user.id} />
-                    <DeletePlaylist playlist={playlist} userId={user.id} />
+                    {/* <AddSongModal playlist={playlist} userId={user?.id} /> */}
+                    <UpdatePlaylistModal playlist={playlist} userId={user?.id} />
+                    <DeletePlaylist playlist={playlist} userId={user?.id} />
                 </div>
             )
         }

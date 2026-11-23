@@ -6,7 +6,7 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 ## Deviations from plan
 
 - **S3 (song fields):** the plan's allow-list for songs was `title`, `description`. I also allowed `previewImage`, because the existing Update Song form lets the owner change the song's cover image and leaving it out would silently break that feature.
-- **S3 (album/playlist image field name):** the frontend sends the new image as `imageUrl` (the create routes use that name too), not `previewImage`. The update routes now accept `imageUrl` as an alias that is saved into `previewImage`. Side effect: changing an album/playlist image from the edit form now actually works (before, the `...album` spread in the form re-sent the **old** `previewImage`, and `imageUrl` was ignored because there is no such column).
+- **S3 (album/playlist image field name):** the frontend sends the new image as `imageUrl` (the create routes use that name too), not `previewImage`. The update routes now accept `imageUrl` as an alias that is saved into `previewImage`. (Correction made during S12: the Update Album / Update Playlist forms have no image picker today; they re-send the current image as `imageUrl`, so the alias simply keeps the image unchanged. It means an image picker can be added later without backend changes.)
 - **S6 (album page):** the plan only named the playlist page, but the album detail page (`DisplayAlbumInfo.js`) also printed the artist's email. Removed it there too (it would have rendered empty after the API change anyway).
 - **S9 (before S17):** the plan suggests doing S9 together with the helmet 5 → 8 upgrade (S17). S17 is not in this batch, so S9 was done on helmet 5. Two helmet-5-specific adjustments: `crossOriginEmbedderPolicy` is turned **off** (helmet 5 enables it by default and it would block S3 images/audio; helmet 7+ has it off by default), and the Content-Security-Policy was extended to allow the Font Awesome kit plus https images/audio. When S17 is done, re-check these options.
 - **S9 (trust proxy):** `app.set('trust proxy', 1)` is applied **only in production**. In development there is no proxy, and trusting `X-Forwarded-For` there would let anyone fake their IP to dodge the rate limiter.
@@ -83,7 +83,6 @@ _Done first (as the plan's "Recommended order" says) so the frontend could be bu
   - As `Los Lonley Boys` (owner of song 1): `PUT /api/songs/1` with `{"title":"Renamed","userId":1,"albumId":3,"id":77,"url":"http://evil"}` → title changes, but `id` stays 1, `userId` stays 2, `albumId` stays 1, `url` unchanged.
   - `PUT /api/albums/1` with `{"title":"Sacred2","description":"d","imageUrl":"http://new.img/x.jpg","userId":1}` → title and image change, `userId` stays 2.
   - As demo: `PUT /api/playlists/1` with `{"name":"Chill2","imageUrl":"...","userId":2}` → `userId` stays 1. `PUT /api/comments/1` with `{"body":"edited","songId":5,"userId":3}` → only `body` changes.
-  - In the UI: edit an album and change the image URL; the new image now shows (it did not before).
 - **Things to watch / follow-ups:** If you add a new editable column later, you must add it to the allow-list or the update will silently ignore it. That is the intended safe default. See "Deviations from plan" for why songs allow `previewImage` and why `imageUrl` is accepted.
 
 ## S4 — Fix the validation middleware
@@ -235,4 +234,30 @@ _Done first (as the plan's "Recommended order" says) so the frontend could be bu
   - This is a small API shape change: `page`, `size` and `total` are now always present, and `page` starts at 1.
   - `title` is an exact match and `createdAt` must equal the exact timestamp (both unchanged from before). A "search" feature would use `LIKE`/`ILIKE` and a date range.
   - Fetching all songs in a loop is fine for hundreds of songs; with thousands, switch the UI to real pagination.
+
+## S12 — Fix frontend crashes and stale pages
+- **Problem:**
+  - Opening `/albums/:id` or `/playlists/:id` while **logged out** crashed the page: `checkValidation` read `user.id` while `user` was `null` ("Cannot read properties of null").
+  - The album and playlist detail pages used `useEffect(..., [])`, so going from one album to another (same component, new URL) never refetched. The page stayed blank or stale until a refresh.
+  - `CreateSong` (and `UpdateSong`, `UpdateAlbum`, `CreateAlbum`) did `.then(() => setShowModal(false), history.push('/songs'))`. The second argument of `.then()` is the **error** handler slot, and `history.push(...)` is evaluated immediately, so the app navigated away even when the request failed. `CreateSong` also cleared the errors right after the `catch`.
+  - Error messages were never shown: `csrfFetch` throws the raw `Response`, and the forms checked `response.errors`, which does not exist on a `Response` (you have to `await response.json()` first).
+  - `DeleteAlbum` and `DeletePlaylist` read the id from `currentAlbum`/`currentPlaylist` in Redux, which is empty on the `/albums` and `/playlists` list pages, so deleting from the list page crashed. They also had the same `.then(dispatch(...))` bug (runs immediately, not after the delete).
+- **What changed:**
+  - `user.id` → `user?.id` in `DisplayAlbumInfo`, `DisplayPlaylistInfo`, `Albums`, `Playlists` (optional chaining: gives `undefined` instead of crashing when `user` is `null`, so owner-only buttons are simply hidden).
+  - `useEffect` dependency arrays are now `[dispatch, albumId]` / `[dispatch, playlistId]`.
+  - New helper `getErrorMessages(res)` in `frontend/src/store/csrf.js`: reads the JSON body of a failed response and returns `errors` (or `message`, or a generic fallback; also handles network errors).
+  - `CreateSong`, `UpdateSong`, `CreateAlbum`, `UpdateAlbum` now use `try { await dispatch(...); close modal; navigate } catch (res) { setErrors(await getErrorMessages(res)) }`, so the modal only closes on success and the server's message is shown on failure. `CreatePlaylist`/`UpdatePlaylist` already chained correctly; they now use `getErrorMessages` too.
+  - `DeleteAlbum`/`DeletePlaylist` use the id from props, `await` the delete, then refresh/navigate, and show an alert with the server message if the delete fails. (`DeletePlaylist` no longer refetches all songs; deleting a playlist does not change songs.)
+- **Files:** `frontend/src/store/csrf.js`, `frontend/src/components/Albums/{Albums,DisplayAlbumInfo,DeleteAlbum}.js`, `frontend/src/components/Playlists/{Playlists,DisplayPlaylistInfo,DeletePlaylist,UpdatePlaylist}.js`, `frontend/src/components/CreateSong/CreateSong.js`, `frontend/src/components/UpdateSong/UpdateSong.js`, `frontend/src/components/CreateAlbum/CreateAlbum.js`, `frontend/src/components/UpdateAlbum/UpdateAlbum.js`, `frontend/src/components/CreatePlaylist/CreatePlaylist.js`
+- **How to verify:**
+  - `cd frontend && npm run build` → compiles (verified; only warnings that already existed, none from these files' changes).
+  - **Manual browser checks (not run here; no browser was available to this session):**
+    1. Log out, open `/albums/1` and `/playlists/1` directly: the page renders, without edit/delete buttons.
+    2. On an album page, use the browser's address bar to go from `/albums/1` to `/albums/2`: the content switches.
+    3. Log in as demo, open "Create Song", submit with no audio file: the modal stays open and shows "Audio file is required." (from S8).
+    4. Create a playlist with a 31-character name (bypass the input in dev tools, or use a long name): the form shows "Playlist name must be 30 characters or less.".
+    5. On `/albums`, delete one of your albums from the list: no crash; it disappears.
+- **Things to watch / follow-ups:**
+  - Remaining lint warnings (missing `alt`, unused vars, `useEffect` deps in `App.js`/`HomePage.js`) are pre-existing and belong to S32/S47.
+  - Frontend tests (S48) and an end-to-end smoke test (S50) would catch regressions like these automatically.
 

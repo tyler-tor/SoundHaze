@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux";
 import { useHistory } from "react-router-dom";
 import { updateAlbum } from "../../store/albums";
 import './updatealbum.css';
+import { getErrorMessages } from "../../store/csrf";
 
 const UpdateAlbum = ({ album, setShowModal }) => {
     const dispatch = useDispatch();
@@ -23,12 +24,13 @@ const UpdateAlbum = ({ album, setShowModal }) => {
             description,
             imageUrl: url
         }
-        await dispatch(updateAlbum(data))
-            .then(() => setShowModal(false), history.push('/albums'))
-            .catch(
-                async (response) => {
-                    if (response && response.errors) setErrors(response.errors);
-                });
+        try {
+            await dispatch(updateAlbum(data));
+            setShowModal(false);
+            history.push('/albums');
+        } catch (response) {
+            setErrors(await getErrorMessages(response));
+        }
     };
 
     return (
