@@ -1,5 +1,6 @@
 const express = require('express');
-require('express-async-errors');
+// Express 5 passes errors thrown in async route handlers (rejected promises)
+// to the error handler by itself, so express-async-errors is no longer needed.
 const { check } = require('express-validator');
 const morgan = require('morgan');
 const cors = require('cors');
@@ -28,6 +29,13 @@ app.use(cookieParser());
 // multipart and handled (with their own size limits) by multer in awsS3.js.
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 app.use(express.json({ limit: '100kb' }));
+// Express 5 leaves req.body undefined when no body parser ran (e.g. a request
+// without a JSON body). Several handlers destructure req.body, so keep the
+// Express 4 behaviour of an empty object.
+app.use((req, _res, next) => {
+    if (req.body === undefined) req.body = {};
+    next();
+});
 
 //Security Middleware
 if (!isProduction) {

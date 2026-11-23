@@ -16,8 +16,12 @@ if (process.env.NODE_ENV === 'production') {
   });
   // Serve the static assets in the frontend's build folder
   router.use(express.static(path.resolve("../frontend/build")));
-  // Serve the frontend's index.html file at all other routes NOT starting with /api
-  router.get(/^(?!\/?api).*/, (req, res) => {
+  // Serve the frontend's index.html file at all other routes NOT starting with /api.
+  // Express 5 path syntax: "/{*splat}" matches any path (the old regex route
+  // is not supported the same way). Unknown /api paths fall through to the
+  // JSON 404 handler in app.js.
+  router.get('/{*splat}', (req, res, next) => {
+    if (req.path === '/api' || req.path.startsWith('/api/')) return next();
     res.cookie('XSRF-TOKEN', req.csrfToken());
     res.sendFile(
       path.resolve(__dirname, '../../frontend', 'build', 'index.html')

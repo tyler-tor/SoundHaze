@@ -29,6 +29,7 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S0 (stricter skip rule):** the seeder skips if the demo user exists **or if the Users table has any rows at all** ("seed only into an empty DB"). If someone ever deleted the demo user from a live database, the seeder still would not pour demo data into it.
 - **S0 (seeder bookkeeping):** `seederStorage` changed from `"sequelize"` (a `SequelizeData` table recording which seeders ran) to `"none"`. The demo seeder checks the data itself, so it can run on every deploy; with the old table, `db:reset` would have dropped the data but kept the "already seeded" record and skipped re-seeding.
 - **S17:** the S9 note said to re-check the helmet options after the upgrade. Done: `crossOriginEmbedderPolicy: false` was removed because helmet 8 already has it off; the CSP and `crossOriginResourcePolicy` options are unchanged.
+- **S19 (before S38/S46):** the plan lists S46 (API tests) and S38 (API-only server, which removes the catch-all route) as prerequisites. Neither is in this batch. Instead, the catch-all was converted to Express 5 syntax (`/{*splat}`), and the API was checked with the curl smoke/validation scripts plus a production-mode routing check (see S19). Two extra Express 5 fixes not named in the plan: an empty `req.body = {}` fallback (Express 5 leaves it `undefined`) and reading song-list query params with `matchedData()` (Express 5's `req.query` cannot be changed by sanitizers).
 
 ## Open questions for Tyler
 
@@ -389,3 +390,23 @@ _New item (not in the original plan), done first at Tyler's request._
   - `AWS_REGION` is now read by our config as well as by the SDK. If your bucket is not in `us-west-2`, set it.
   - When CloudFront serves uploads under `/media/*` (S43), `MEDIA_BASE_URL` must be set to that prefix and CloudFront's origin path must strip `/media`, otherwise new URLs 404. Existing database rows keep their old full S3 URLs.
   - The seed data still uses hard-coded `https://soundcloud-bucket...` URLs (building them from `MEDIA_BASE_URL` is S37).
+
+## S19 — Express 4 to 5
+- **Problem:** Express 4 is in maintenance mode and pulled in `path-to-regexp`/`body-parser` versions with advisories. The app needed the `express-async-errors` monkey-patch to catch errors in `async` handlers. Two handlers misused the response object: `comment.js` did `res.status = 200` (overwrites the `status` *function* with a number) and `artist.js` called `res.message(...)`, which does not exist.
+- **What changed:**
+  - `express` `^4.18.1` → `^5.3.0`; `express-async-errors` removed. Express 5 sends a rejected promise from any route handler to the error handler by itself.
+  - `routes/index.js`: the production catch-all `router.get(/^(?!\/?api).*/, ...)` became `router.get('/{*splat}', ...)` (Express 5's wildcard syntax), which skips paths starting with `/api` so unknown API routes still get the JSON 404.
+  - `comment.js`: `res.status = 200; res.json(...)` → `res.status(200).json(...)`.
+  - `artist.js` `GET /api/artists`: removed the dead `res.message`/`next(res)` branch (`findAll` always returns an array).
+  - `app.js`: after the body parsers, `req.body` defaults to `{}`. Express 5 leaves it `undefined` when no parser ran (e.g. a `PUT` with no body), and several handlers destructure it, which would have turned a 400 into a 500.
+  - `songs.js` `GET /api/songs`: reads `page`, `size`, `title`, `createdAt` via express-validator's `matchedData()` instead of `req.query`. In Express 5 `req.query` is re-parsed on each access, so the `toInt()` sanitizers can no longer change it in place; `matchedData()` returns the sanitized numbers.
+- **Files:** `backend/app.js`, `backend/routes/index.js`, `backend/routes/api/comment.js`, `backend/routes/api/artist.js`, `backend/routes/api/songs.js`, `backend/package.json`, `backend/package-lock.json`
+- **How to verify** (verified):
+  - Full curl smoke and validation scripts: same results as before (`?page=2&size=5` returns ids 6 to 10 and `page`/`size` as numbers).
+  - Async errors: `POST /api/playlists` with `{"name":"x"}` (no image) throws a Sequelize `notNull` error inside an async handler → JSON error response, and the server keeps running.
+  - `PUT /api/albums/1` with no body → `400` with validation messages (not 500). Malformed JSON → `400`.
+  - `DELETE /api/comments/2` (by its author) → `200 {"message":"Successfully deleted"}`. `GET /api/artists` → list.
+  - Production routing (run with `NODE_ENV=production` and a dummy `DATABASE_URL`, routes that need no DB): `/` and `/albums/3` → `index.html` with the `XSRF-TOKEN` cookie; `/manifest.json` → the static file; `/api/nope` and `/api` → JSON 404.
+- **Things to watch / follow-ups:**
+  - Express 5 route syntax differs: `*` must be named (`/*splat` or `/{*splat}`), optional parts use braces (`/:id{.:ext}`), and regex characters in strings are not allowed. Keep this in mind when adding routes.
+  - Several route files still have an unused circular `require('../../app')` at the top (noted in S2). Harmless; remove in the lint item (S47).

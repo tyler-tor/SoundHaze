@@ -1,7 +1,7 @@
 const express = require('express');
 const { setTokenCookie, requireAuth, restoreUser } = require('../../utils/auth');
 const { Song, User, Album, Comment } = require('../../db/models');
-const { check, query } = require('express-validator');
+const { check, query, matchedData } = require('express-validator');
 const { handleValidationErrors, validateIdParam } = require('../../utils/validation');
 const { requireOwner } = require('../../utils/ownership');
 const { pick } = require('../../utils/pick');
@@ -185,9 +185,13 @@ router.delete('/:songId', requireAuth, async(req, res, next) => {
 })
 
 router.get('/', validateQueryParams, async (req, res, next) => {
-    const page = req.query.page || 1;
-    const size = req.query.size || DEFAULT_SIZE;
-    const { title, createdAt } = req.query;
+    // matchedData returns the validated values, with page/size already
+    // converted to numbers by toInt(). (In Express 5 req.query is re-parsed
+    // on every access, so sanitizers cannot change it in place.)
+    const params = matchedData(req, { locations: ['query'] });
+    const page = params.page || 1;
+    const size = params.size || DEFAULT_SIZE;
+    const { title, createdAt } = params;
 
     const where = {};
     if (title) where.title = title;
