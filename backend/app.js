@@ -42,10 +42,9 @@ app.use(
         // Allow other origins (e.g. the frontend on S3/CloudFront) to load
         // resources served by this API.
         crossOriginResourcePolicy: { policy: 'cross-origin' },
-        // helmet 5 turns COEP on by default. It would block the S3 images
-        // and audio (S3 does not send Cross-Origin-Resource-Policy headers).
-        // helmet 7+ has it off by default.
-        crossOriginEmbedderPolicy: false,
+        // Cross-Origin-Embedder-Policy stays off (helmet 7+ default). Turning
+        // it on would block the S3 images and audio, which do not send
+        // Cross-Origin-Resource-Policy headers.
         // The CSP mainly matters for the React build that Express serves in
         // production (routes/index.js). Extend helmet's defaults with what
         // the app actually loads: the Font Awesome kit, images and audio

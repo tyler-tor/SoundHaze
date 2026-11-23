@@ -28,6 +28,7 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S0 (new item; overlaps S37):** removing the fixed ids from the seeds is part of S37 in the plan. It was required for safe seeding, so it was done here. The rest of S37 (Jane Doe's broken image URL, dropping the `UNIQUE` on `Songs.title`/`url`, wider titles, `MEDIA_BASE_URL` seed URLs) is **not** done; the seed data is copied exactly as it was.
 - **S0 (stricter skip rule):** the seeder skips if the demo user exists **or if the Users table has any rows at all** ("seed only into an empty DB"). If someone ever deleted the demo user from a live database, the seeder still would not pour demo data into it.
 - **S0 (seeder bookkeeping):** `seederStorage` changed from `"sequelize"` (a `SequelizeData` table recording which seeders ran) to `"none"`. The demo seeder checks the data itself, so it can run on every deploy; with the old table, `db:reset` would have dropped the data but kept the "already seeded" record and skipped re-seeding.
+- **S17:** the S9 note said to re-check the helmet options after the upgrade. Done: `crossOriginEmbedderPolicy: false` was removed because helmet 8 already has it off; the CSP and `crossOriginResourcePolicy` options are unchanged.
 
 ## Open questions for Tyler
 
@@ -353,3 +354,15 @@ _New item (not in the original plan), done first at Tyler's request._
   - Validation: empty/whitespace/31-char playlist name, empty comment, `songId: "abc"`, `?page=0`, `?size=101`, `?createdAt=notadate`, empty album description → `400` with the same messages as before. `?page=2&size=5` → ids 6 to 10 (`page`/`size` are numbers, so `toInt()` still works). Empty login → `["Please provide a valid email or username.", "Please provide a password."]`.
   - Uploads: no file → `400`, `.txt` → `415`, 6 MB PNG → `413`, small PNG reaches the S3 call (fails only for lack of AWS credentials), signup without image → `200`, signup with `.txt` → `415`, PNG as a song → `415`, no audio → `400`.
 - **Things to watch / follow-ups:** Several chains start with `.isString()` without a message, so sending a number instead of a string shows "Invalid value". Harmless (pre-existing); messages can be added in the lint/tests items.
+
+## S17 — helmet 5 to 8
+- **Problem:** helmet 5 is three major versions old. It still sent the obsolete `Expect-CT` header and needed a manual override to keep COEP off.
+- **What changed:**
+  - `helmet` `^5.1.0` → `^8.3.0`.
+  - Removed `crossOriginEmbedderPolicy: false` from `app.js` (helmet 7+ leaves COEP off by default; a comment explains why it must stay off). The CSP directives and `crossOriginResourcePolicy: cross-origin` from S9 are unchanged.
+  - Header differences after the upgrade: `Expect-CT` is gone (browsers dropped it), HSTS `max-age` is now 1 year (was 180 days), `Origin-Agent-Cluster: ?1` and `X-XSS-Protection: 0` are sent, and the CSP gains `upgrade-insecure-requests` by default.
+- **Files:** `backend/app.js`, `backend/package.json`, `backend/package-lock.json`
+- **How to verify** (verified): `curl -I http://localhost:5000/api/songs/1` shows `Content-Security-Policy` (with the Font Awesome and `https:` media rules), `Strict-Transport-Security: max-age=31536000; includeSubDomains`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Cross-Origin-Resource-Policy: cross-origin`, and **no** `Cross-Origin-Embedder-Policy` or `Expect-CT`. All curl smoke and validation checks pass.
+- **Things to watch / follow-ups:**
+  - `upgrade-insecure-requests` tells browsers to load `http://` images/audio over `https://`. All seed media is `https://` already; a media URL that only works over plain HTTP would break in the Express-served build.
+  - The CSP still only matters for pages Express serves (production mode). Once the frontend lives on S3/CloudFront, set the CSP there (S43).
