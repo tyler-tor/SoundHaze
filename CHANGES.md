@@ -11,6 +11,8 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S9 (before S17):** the plan suggests doing S9 together with the helmet 5 → 8 upgrade (S17). S17 is not in this batch, so S9 was done on helmet 5. Two helmet-5-specific adjustments: `crossOriginEmbedderPolicy` is turned **off** (helmet 5 enables it by default and it would block S3 images/audio; helmet 7+ has it off by default), and the Content-Security-Policy was extended to allow the Font Awesome kit plus https images/audio. When S17 is done, re-check these options.
 - **S9 (trust proxy):** `app.set('trust proxy', 1)` is applied **only in production**. In development there is no proxy, and trusting `X-Forwarded-For` there would let anyone fake their IP to dodge the rate limiter.
 - **S9 (separate counters):** login and signup each have their **own** 10/min counter, so failed logins do not block signups (and vice versa).
+- **S11 (frontend):** the plan lists `frontend/src/store/songs.js` as "later". Because the API now returns 20 songs by default and there are 100 seed songs, the Songs page and the song detail page (which looks songs up in the full list) would have lost songs. So `getSongs()` in the store now fetches page after page (100 per page) until it has them all. The UI behaves exactly as before; real paginated UI ("Load more") can come with the UI items (S33/S34).
+- **S11 (invalid params):** instead of silently clamping bad values (the old code turned `page=-1` into `0`), invalid `page`/`size`/`createdAt` now return `400` with a clear message. Maximum `size` is 100.
 
 ## Open questions for Tyler
 
@@ -208,4 +210,29 @@ _Done first (as the plan's "Recommended order" says) so the frontend could be bu
   - `POST /api/songs/999/comments` → `404 "Song couldn't be found."`.
   - Logged out → `401`.
 - **Things to watch / follow-ups:** There is still no comments UI in the frontend; S34 adds one.
+
+## S11 — Fix song list pagination
+- **Problem:** `GET /api/songs` pagination was broken in several ways:
+  - `parseInt(page)` was called but its result thrown away, so `page`/`size` stayed strings.
+  - Pages effectively started at 0: `?page=0` produced `OFFSET -20`, which Postgres rejects (500). SQLite tolerates it, which hid the bug locally.
+  - When filtering by `title` or `createdAt`, `limit`/`offset` were nested under a `pagination` key that Sequelize ignores, so filters returned everything.
+  - In the last branch `where` was spread into the options object itself (`{...where}` instead of `{ where }`), so filters were ignored there.
+  - With no params it returned every song.
+- **What changed:**
+  - Query params are validated with express-validator `query()`: `page` integer ≥ 1 (default 1), `size` integer 1 to 100 (default 20), `title` string ≤ 30, `createdAt` ISO date. Invalid values → `400`.
+  - One code path: `Song.findAndCountAll({ where, order: [['id','ASC']], limit: size, offset: (page - 1) * size })`. The stable `ORDER BY id` keeps pages from overlapping.
+  - Response is always `{ Songs, page, size, total }` (`total` = number of songs matching the filters).
+  - Frontend `getSongs()` loops through pages so the UI still gets the full list (see Deviations).
+- **Files:** `backend/routes/api/songs.js`, `frontend/src/store/songs.js`
+- **How to verify** (verified with curl against the 100 seed songs):
+  - `GET /api/songs` → 20 songs, `page: 1, size: 20, total: 100`.
+  - `?page=2&size=5` → ids 6 to 10.
+  - `?page=0`, `?page=abc`, `?size=0`, `?size=101`, `?createdAt=notadate` → `400` with a message.
+  - `?title=My%20Way` → 1 song, `total: 1`; `?title=My%20Way&page=2` → 0 songs (pagination now applies to filters).
+  - `?page=1&size=100` → all 100; `?page=2&size=100` → empty.
+  - UI: the Songs page still lists every song (frontend build verified after S12).
+- **Things to watch / follow-ups:**
+  - This is a small API shape change: `page`, `size` and `total` are now always present, and `page` starts at 1.
+  - `title` is an exact match and `createdAt` must equal the exact timestamp (both unchanged from before). A "search" feature would use `LIKE`/`ILIKE` and a date range.
+  - Fetching all songs in a loop is fine for hundreds of songs; with thousands, switch the UI to real pagination.
 

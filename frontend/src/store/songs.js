@@ -29,14 +29,23 @@ const showSongAction = (song) => ({
     song
 })
 
+// GET /api/songs is paginated (max 100 per page). The UI still expects the
+// full list, so fetch page after page until we have them all.
 export const getSongs = () => async (dispatch) => {
-    const res = await csrfFetch('/api/songs');
+    const size = 100;
+    let songs = [];
 
-    if (res.ok) {
+    for (let page = 1; ; page++) {
+        const res = await csrfFetch(`/api/songs?page=${page}&size=${size}`);
+        if (!res.ok) return;
+
         const data = await res.json();
-        dispatch(getSongsAction(data.Songs));
-        return data.Songs;
+        songs = songs.concat(data.Songs);
+        if (data.Songs.length < size || songs.length >= data.total) break;
     }
+
+    dispatch(getSongsAction(songs));
+    return songs;
 };
 
 export const createAddSong = (data) => async (dispatch) => {

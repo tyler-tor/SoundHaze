@@ -1,7 +1,7 @@
 const express = require('express');
 const { setTokenCookie, requireAuth, restoreUser } = require('../../utils/auth');
 const { Song, User, Album, Comment } = require('../../db/models');
-const { check, query, condition } = require('express-validator');
+const { check, query } = require('express-validator');
 const { handleValidationErrors, validateIdParam } = require('../../utils/validation');
 const { requireOwner } = require('../../utils/ownership');
 const { pick } = require('../../utils/pick');
@@ -51,29 +51,34 @@ const validateSongUpdate = [
     handleValidationErrors
 ];
 
+// Query params for GET /api/songs. All optional:
+//   page      integer >= 1          (default 1)
+//   size      integer 1..MAX_SIZE   (default DEFAULT_SIZE)
+//   title     exact song title
+//   createdAt a date/time
+const DEFAULT_SIZE = 20;
+const MAX_SIZE = 100;
+
 const validateQueryParams = [
-    check('size')
-        .custom(async (value, { req }) => {
-            if(req.query){
-                const {size} = req.query
-                if(size < 0 ){
-                    return await Promise.reject("Size must be greater than or equal to 0")
-                }
-            }
-        }),
-    check('page')
-        .custom(async (value, { req }) => {
-            if(req.query){
-                const{ page} = req.query
-                if(page < 0) {
-                    return await Promise.reject("Page must be greater than or equal to 0")
-                }
-            }
-        }),
-    check('createdAt')
-        .isDate( {dateOnly: false})
-        .optional({nullable: true})
-        .withMessage("CreatedAt is invalid"),
+    query('page')
+        .optional()
+        .isInt({ min: 1 })
+        .withMessage('Page must be an integer greater than or equal to 1.')
+        .toInt(),
+    query('size')
+        .optional()
+        .isInt({ min: 1, max: MAX_SIZE })
+        .withMessage(`Size must be an integer between 1 and ${MAX_SIZE}.`)
+        .toInt(),
+    query('title')
+        .optional()
+        .isString()
+        .isLength({ max: 30 })
+        .withMessage('Title must be 30 characters or less.'),
+    query('createdAt')
+        .optional()
+        .isISO8601()
+        .withMessage('CreatedAt is invalid'),
     handleValidationErrors
 ];
 
@@ -180,71 +185,29 @@ router.delete('/:songId', requireAuth, async(req, res, next) => {
 })
 
 router.get('/', validateQueryParams, async (req, res, next) => {
-    let { page, size, title, createdAt } = req.query;
-    let pagination = {};
-    let where = {};
+    const page = req.query.page || 1;
+    const size = req.query.size || DEFAULT_SIZE;
+    const { title, createdAt } = req.query;
 
-    if(page) parseInt(page);
-    if(size) parseInt(size);
-    if(page < 0 || page > 10) page = 0;
-    if(size < 0 || size > 20) size = 20;
-    if(!size && page) size = 20;
-    if(!page && size) page = 0;
-    if(title && !page) page = 0;
-    if(title && !size) size = 20;
-    if(createdAt && !page) page = 0;
-    if(createdAt && !size) size = 20;
+    const where = {};
+    if (title) where.title = title;
+    if (createdAt) where.createdAt = new Date(createdAt);
 
-
-    pagination.limit = parseInt(size);
-    pagination.offset = parseInt(size) * (parseInt(page) - 1);
-    if(title) where.title = title;
-    if(createdAt) where.createdAt = createdAt
-
-    let Songs;
-
-    if(!page && !size && !title && !createdAt){
-            Songs = await Song.findAll();
-            return res.json({Songs});
-    }
-
-    if(title && !createdAt){
-        Songs = await Song.findAll({
-            where: {
-                ...where
-            },
-            pagination
-        });
-        return res.json({
-            Songs,
-            page,
-            size
-        })
-    }
-    if(!title && createdAt){
-        Songs = await Song.findAll({
-            where: {
-                ...where
-            },
-            pagination
-        });
-        return res.json({
-            Songs,
-            page,
-            size
-        })
-    }
-
-    Songs = await Song.findAll({
-        ...where,
-        ...pagination
+    // findAndCountAll runs the page query plus a COUNT(*) with the same
+    // filters, so the client knows how many songs there are in total.
+    const { rows: Songs, count: total } = await Song.findAndCountAll({
+        where,
+        order: [['id', 'ASC']], // stable order so pages don't overlap
+        limit: size,
+        offset: (page - 1) * size
     });
 
     return res.json({
         Songs,
         page,
-        size
-});
+        size,
+        total
+    });
 })
 
 module.exports = router
