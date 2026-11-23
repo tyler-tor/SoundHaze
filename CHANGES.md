@@ -325,3 +325,19 @@ _New item (not in the original plan), done first at Tyler's request._
   - **Changed command:** `start:development` / `start:production` are gone. Use `npm run dev` locally and `npm start` in production (set `NODE_ENV=production` in the environment, as before).
   - `node --watch` restarts on changes to files the app `require`s; it does not watch `.env`. Restart by hand after editing `.env`.
   - `@faker-js/faker` (dev dependency) is not used anywhere; it can be removed in a cleanup item.
+
+## S15 — jsonwebtoken 8 to 9
+- **Problem:** `jsonwebtoken` 8 has known vulnerabilities (fixed in 9). A missing `JWT_SECRET` only showed up as a crash at the first login. `JWT_EXPIRES_IN` was used as a string in one place (`expiresIn * 1000`, which only worked through JavaScript's automatic string-to-number conversion) and with `parseInt` in another.
+- **What changed:**
+  - `jsonwebtoken` upgraded to `^9.0.3`.
+  - `utils/auth.js` checks the config once at startup: no `JWT_SECRET` → the server refuses to start with "JWT_SECRET is not set..."; `JWT_EXPIRES_IN` must be a whole number of seconds, otherwise "JWT_EXPIRES_IN must be a whole number of seconds (got "7d")". If `JWT_EXPIRES_IN` is not set at all it defaults to `604800` (7 days) in `config/index.js`.
+  - `expiresIn` is converted to a number once and used for both the token (`expiresIn` seconds) and the cookie (`maxAge` = seconds × 1000 ms).
+  - `jwt.verify` now only accepts `HS256` (the algorithm the app signs with) and is skipped when there is no `token` cookie.
+- **Files:** `backend/utils/auth.js`, `backend/config/index.js`, `backend/package.json`, `backend/package-lock.json`
+- **How to verify** (verified):
+  - Normal flow: the usual curl checks pass; the login response has `Set-Cookie: token=...; Max-Age=604800; HttpOnly`.
+  - `JWT_SECRET= node -e 'require("./app")'` → throws "JWT_SECRET is not set...". `JWT_EXPIRES_IN=7d` → throws the "whole number of seconds" error.
+  - A forged token using `"alg":"none"` in the cookie → `GET /api/my` returns `{}` (not logged in).
+- **Things to watch / follow-ups:**
+  - Values like `7d` used to "work" for the JWT part only by accident (and broke the cookie's `maxAge`). Use seconds, e.g. `JWT_EXPIRES_IN=604800`.
+  - Existing login cookies stay valid across the upgrade (same algorithm and secret).

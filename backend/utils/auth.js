@@ -2,20 +2,30 @@ const jwt = require('jsonwebtoken');
 const { jwtConfig } = require('../config');
 const { User } = require('../db/models');
 
-const { secret, expiresIn } = jwtConfig;
+// Checked once when the app starts, so a missing secret fails loudly at
+// startup instead of at the first login.
+const secret = jwtConfig.secret;
+if (!secret) {
+    throw new Error('JWT_SECRET is not set. Add it to backend/.env (any long random string).');
+}
+// Lifetime in seconds, as a number. Used for both the token and the cookie.
+const expiresIn = Number(jwtConfig.expiresIn);
+if (!Number.isInteger(expiresIn) || expiresIn <= 0) {
+    throw new Error(`JWT_EXPIRES_IN must be a whole number of seconds (got "${jwtConfig.expiresIn}").`);
+}
 
 const setTokenCookie = (res,user) => {
     const token = jwt.sign(
         { data: user.toSafeObject() },
         secret,
-        { expiresIn: parseInt(expiresIn) }
+        { expiresIn } // number = seconds
     );
 
     const isProduction = process.env.NODE_ENV === 'production';
 
     //set the token cookie
     res.cookie('token', token, {
-        maxAge: expiresIn * 1000,
+        maxAge: expiresIn * 1000, // cookie maxAge is in milliseconds
         httpOnly: true,
         secure: isProduction,
         sameSite: isProduction && 'Lax'
@@ -28,7 +38,10 @@ const restoreUser = (req, res, next) => {
     const { token } = req.cookies;
     req.user = null;
 
-    return jwt.verify(token, secret, null, async(err, jwtPayload) => {
+    if (!token) return next();
+
+    // Only accept the algorithm we sign with (HS256 is jsonwebtoken's default).
+    return jwt.verify(token, secret, { algorithms: ['HS256'] }, async(err, jwtPayload) => {
         if(err){
             return next();
         }
