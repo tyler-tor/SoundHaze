@@ -15,7 +15,7 @@ Everything here was checked against the actual files. When this guide says "from
 7. [Frontend tour](#7-frontend-tour)
 8. [Three end-to-end traces](#8-three-end-to-end-traces)
 9. [Where do I look when...](#9-where-do-i-look-when)
-10. [What changed in Batches 1 and 2, and what's coming](#10-what-changed-in-batches-1-and-2-and-whats-coming)
+10. [What changed in Batches 1 to 3, and what's coming](#10-what-changed-in-batches-1-to-3-and-whats-coming)
 11. [Interview prep](#11-interview-prep)
 12. [Glossary](#12-glossary)
 
@@ -23,11 +23,12 @@ Everything here was checked against the actual files. When this guide says "from
 
 ## 1. The app in one minute
 
-**What it does.** Visitors can browse songs, albums and playlists and play songs in a player bar at the bottom of the page. After signing up, logging in, or clicking **Demo**, a user can:
+**What it does.** Visitors can browse songs, albums and playlists, read comments, and play songs in a player bar that stays at the bottom of the page. After signing up, logging in, or clicking **Demo**, a user can:
 
 - create albums (with a cover image),
 - upload songs into their own albums (audio files go to Amazon S3),
 - create playlists and add any song to them,
+- comment on any song,
 - edit or delete only the things they own.
 
 **The stack.**
@@ -35,12 +36,13 @@ Everything here was checked against the actual files. When this guide says "from
 | Layer | Technology | Where |
 |---|---|---|
 | Build tool / dev server | Vite 8 (replaced Create React App in S21) | `frontend/vite.config.js`, `frontend/index.html` |
-| UI | React 18 with `createRoot`, React Router v7 | `frontend/src` |
-| State | Redux Toolkit 2 (`configureStore`, thunk built in) + react-redux 9; reducers are still hand-written | `frontend/src/store` |
+| UI | React 19 with `createRoot`, React Router v7 | `frontend/src` |
+| State | Redux Toolkit 2 (`configureStore`, thunk built in, every store file a `createSlice` slice) + react-redux 9 | `frontend/src/store` |
+| Look and feel | Design tokens as CSS variables (`tokens.css`), base styles, Fraunces + Hanken Grotesk fonts (self-hosted via npm) | `frontend/src/styles` |
 | HTTP helper | `csrfFetch` (wraps `fetch`, adds the `X-CSRF-Token` header, retries once on a stale token) | `frontend/src/store/csrf.js` |
 | API server | Express 5 | `backend/app.js`, `backend/routes` |
 | ORM | Sequelize 6.37 (SQLite in development, Postgres in production) | `backend/db` |
-| Files | AWS S3 via AWS SDK v3 (`@aws-sdk/client-s3` + `lib-storage`) and multer 2 | `backend/awsS3.js` |
+| Files | AWS S3 via AWS SDK v3 (`@aws-sdk/client-s3` + `lib-storage`), multer 2, and `sharp` to shrink uploaded images | `backend/awsS3.js` |
 | Auth | JWT (jsonwebtoken 9) in an `httpOnly` cookie; CSRF via `csrf-csrf` (double-submit) | `backend/utils/auth.js`, `backend/utils/csrf.js` |
 
 **How a request flows.** Every feature follows the same path:
@@ -65,13 +67,13 @@ In words: a component calls `dispatch(someThunk())`. The thunk calls `csrfFetch(
 
 ## 2. Folder map
 
-Skips `node_modules`, `frontend/dist` (the build output) and lockfiles. CSS files sit next to their components and are not listed one by one.
+Skips `node_modules`, `frontend/dist` (the build output) and lockfiles. Component CSS files (Navigation, Player, Modal, Footer, HomePage, Comments) sit next to their components and are not listed one by one.
 
 ```text
 SoundCloud-API-Project/
 ├── package.json              Root helper scripts only (dev:backend, dev:frontend, build, start, db:migrate, db:seed, db:reset). No dependencies.
 ├── README.md                 Old 2022/2023 README (Heroku link, screenshots). S53 rewrites it.
-├── CHANGES.md                What Batches 1 and 2 changed, item by item, with verification steps, plus the database rule.
+├── CHANGES.md                What Batches 1 to 3 changed, item by item, with verification steps, plus the database rule.
 ├── MODERNIZATION_PLAN.md     The 55-item plan (S1 to S55).
 ├── docs/WALKTHROUGH.md       This file.
 │
@@ -80,7 +82,7 @@ SoundCloud-API-Project/
 │   ├── .sequelizerc          Tells sequelize-cli where config, models, migrations and seeders live.
 │   ├── bin/www               Entry point: loads .env, checks the DB connection, then app.listen().
 │   ├── app.js                Builds the Express app: middleware chain, routes, error handlers.
-│   ├── awsS3.js              multer setup (limits, MIME types) + S3 upload via AWS SDK v3.
+│   ├── awsS3.js              multer setup (limits, MIME types), image resize with sharp, S3 upload via AWS SDK v3 (long Cache-Control on uploads).
 │   ├── psql-setup-script.js  Production build step: creates the Postgres schema named by SCHEMA.
 │   ├── README.md             The original API spec from App Academy (partly out of date).
 │   ├── config/
@@ -88,14 +90,14 @@ SoundCloud-API-Project/
 │   │   └── database.js       Sequelize config: SQLite file in development, DATABASE_URL Postgres in production. Loads backend/.env itself.
 │   ├── db/
 │   │   ├── models/           One file per table + index.js that loads them all and wires associations.
-│   │   ├── migrations/       Six files that create the six tables, in order. Their down() refuses in production.
+│   │   ├── migrations/       Six files that create the six tables, in order, plus add-indexes (S25: foreign-key indexes and a unique (playlistId, songId)). The table migrations' down() refuses in production; the index one only drops indexes.
 │   │   ├── seeders/          One idempotent seeder (20261123000000-demo-data.js) that inserts the demo data.
 │   │   ├── seed-data.js      The demo data itself, linked by names (username, album/song title), no fixed ids.
 │   │   └── safety.js         assertNotProduction(): blocks undo/reset when NODE_ENV=production.
 │   ├── scripts/
 │   │   └── assert-not-production.js  Used by npm run db:reset.
 │   ├── routes/
-│   │   ├── index.js          GET /api/csrf/restore (all environments), mounts /api; in production also serves frontend/dist.
+│   │   ├── index.js          GET /api/csrf/restore (all environments), mounts /api (all API answers are Cache-Control: no-store); in production also serves frontend/dist through utils/staticFrontend.js.
 │   │   └── api/
 │   │       ├── index.js      Runs restoreUser for every /api request, then mounts each router below.
 │   │       ├── session.js    POST /login, DELETE /logout
@@ -113,19 +115,23 @@ SoundCloud-API-Project/
 │       ├── ownership.js      requireOwner(Model, param): 404/403 before a write
 │       ├── validation.js     handleValidationErrors, validateIdParam, forbiddenErr
 │       ├── pick.js           pick(obj, allowedKeys): blocks mass assignment
-│       └── rateLimit.js      loginLimiter, signupLimiter (10/min per IP)
+│       ├── rateLimit.js      loginLimiter, signupLimiter (10/min per IP)
+│       └── staticFrontend.js Serves frontend/dist in production with cache headers (hashed assets: 1 year immutable; index.html: no-cache)
 │
 └── frontend/
     ├── package.json          Vite app: dev/start, build, preview scripts. "type": "module".
     ├── vite.config.js        React plugin, dev server on :3000, /api proxy to the backend, build to dist/.
-    ├── index.html            Vite entry page; loads /src/index.jsx as a module.
-    ├── public/               Copied as-is into dist/: manifest.json, default-avatar.svg, background images.
+    ├── index.html            Vite entry page; loads /src/index.jsx as a module. Has the page description, theme color and favicon link.
+    ├── public/               Copied as-is into dist/: manifest.json, favicon.svg, default-avatar.svg.
     └── src/
         ├── index.jsx         Creates the store, fetches a CSRF token, renders <Root/> with createRoot.
-        ├── App.jsx           Restores the session, then renders the <Routes> table + player.
-        ├── context/Modal.jsx ModalProvider + <Modal> (React portal).
-        ├── store/            Redux: index.js (configureStore), csrf.js, one file per slice. Plain .js files.
-        └── components/       One folder per feature (Songs, Albums, Playlists, Create*, Update*, ...). Files with JSX are .jsx.
+        ├── index.css         Imports styles/tokens.css, base.css, states.css.
+        ├── App.jsx           Restores the session; renders skip link, nav, <main> with the <Routes> table, footer and the player.
+        ├── styles/           tokens.css (design tokens), base.css (reset, buttons, forms, cards, track rows), pages.css (detail pages, sign-up, 404), states.css (skeletons, empty/error boxes, toasts).
+        ├── context/Modal.jsx ModalProvider + accessible <Modal> (portal, focus trap, Escape, inert background) and Modal.css.
+        ├── store/            Redux: index.js (configureStore), csrf.js, and one createSlice file per slice (session, songs, albums, playlists, comments, player) + playlistSongs.js (thunks only).
+        └── components/       One folder per feature (Songs, Albums, Playlists, Comments, Create*, Update*, ...). Files with JSX are .jsx.
+            └── common/       Shared pieces: Cover, Logo, PlayButton, Toast (ToastProvider/useToast), States (skeletons, EmptyState, ErrorState), useLoad, usePageTitle.
 ```
 
 ---
@@ -170,7 +176,7 @@ What each one does:
 
 Frontend (optional): `frontend/.env.local` can set `VITE_BACKEND_URL=http://localhost:5000` if your backend runs elsewhere. Only `VITE_*` variables reach browser code, as `import.meta.env.VITE_...`.
 
-**Step 3. Install each app separately** (a root `npm install` installs nothing):
+**Step 3. Install each app separately** (a root `npm install` installs nothing). After pulling Batch 3 run `npm install` again in both: the backend gained `sharp` and `sqlite3` 6, the frontend gained React 19 and two font packages:
 
 ```bash
 cd backend && npm install
@@ -201,6 +207,8 @@ You should see `Database connection success! Sequelize is ready to use...` and `
 **Step 6. Open http://localhost:3000.** The Vite dev server forwards every `/api/...` request to port 5000 (`server.proxy` in `frontend/vite.config.js`). From the browser's point of view everything is one origin, so cookies just work.
 
 **Step 7. Log in.** Click **Demo** in the nav bar (it logs in as `Demo-lition` / `password`). Other seed accounts include `Los Lonley Boys` / `password2` (owner of the "Sacred" album and song 1), handy for testing ownership rules.
+
+> **If `npm install` fails on `sqlite3`:** version 6's prebuilt binary needs glibc 2.38 or newer (current macOS, Windows, Ubuntu 24.04+, Debian 13 are fine; Ubuntu 22.04 and Debian 12 are not). Run `npm rebuild sqlite3 --build-from-source` (needs a C++ compiler and Python), or use a newer OS image. Production uses Postgres and does not need it.
 
 **Production-style build:** `cd frontend && npm run build` writes `frontend/dist/`; `npm run preview` serves it on port 3000 with the same `/api` proxy. In production the backend runs with `npm start` (`node ./bin/www`).
 
@@ -292,14 +300,14 @@ Every table also has `createdAt` and `updatedAt` (default `CURRENT_TIMESTAMP`).
 - A song's `previewImage` is copied from its album when it is created (see `POST /api/albums/:albumId/songs`).
 
 **`Comment`** (`comment.js`)
-- Associations: `belongsTo` Song and User. No scopes. There is no comments UI yet (S34).
+- Associations: `belongsTo` Song and User. No scopes. The song page shows and edits comments (S34).
 
 **`Playlist`** (`playlist.js`)
 - Associations: `belongsToMany` Song through `PlaylistSong`; `belongsTo` User.
 - Scope `noPlaylistSongs` exists but nothing uses it.
 
 **`PlaylistSong`** (`playlistsong.js`)
-- The join table. No associations of its own (the other two models declare the many-to-many). Scope `addSongs` hides timestamps; used in the response of "add song to playlist".
+- The join table. No associations of its own (the other two models declare the many-to-many). Scope `addSongs` hides timestamps; used in the response of "add song to playlist". Since S25 the model declares a **unique** index on `(playlistId, songId)`.
 
 **`index.js`** is generated by sequelize-cli. It reads every file in the folder, calls each model's factory, then calls every `associate()`. That is why routes can do `const { Song, User } = require('../../db/models')`.
 
@@ -307,7 +315,9 @@ Every table also has `createdAt` and `updatedAt` (default `CURRENT_TIMESTAMP`).
 - `Albums.title` and `Songs.title` are **unique across the whole database** in the migrations. Two different users cannot both have an album called "Greatest Hits". This would surface as a 500 with "Validation error" (a `UniqueConstraintError` from Sequelize).
 - `Playlists.userId` has no `onDelete: 'cascade'` in its migration, unlike the other foreign keys.
 - `Songs.albumId` is nullable in the migration but `allowNull: false` in the model, so the model is stricter than the DB.
-- There is no unique rule on `(playlistId, songId)`, so the same song can be added to a playlist twice (S25 plans to add one).
+- `(playlistId, songId)` is unique since S25 (migration `add-indexes`), so adding the same song to a playlist twice returns `409`. That migration also removes any duplicates already in the table (keeping the oldest) before it creates the index.
+
+**Indexes (S25).** Postgres does not index foreign keys by itself, so the `add-indexes` migration adds one on each of `Songs.userId`, `Songs.albumId`, `Albums.userId`, `Playlists.userId`, `Comments.songId` and `Comments.userId`. Without them, "songs of this album" or "comments on this song" reads the whole table; with them it jumps straight to the matching rows. Unlike the table migrations, its `down()` is allowed in production because dropping an index loses no data.
 
 **Seed data** (`backend/db/seed-data.js`, inserted by `backend/db/seeders/20261123000000-demo-data.js`, S0): 7 users, 7 albums, 100 songs (audio and images point at the `soundcloud-bucket` S3 bucket in `us-west-2`), 15 playlists with 151 playlist entries, and 2 comments.
 
@@ -356,13 +366,12 @@ Express runs middleware **top to bottom** for every request. Each one either ans
 - Move the 404 handler above `routes` and every request returns 404.
 - Every API error in the app ends up in handler #11, so the JSON shape `{ title, message, errors: [...] }` is the same everywhere. The frontend's `getErrorMessages()` relies on that shape.
 
-Unused imports at the top of `app.js`: `check`, `handleValidationErrors` and `forbiddenErr` are imported but never used.
-
 ### 5.3 `backend/routes/index.js`
 
-- `GET /api/csrf/restore` in **every** environment (S20): returns `200 { csrfToken }`, sets the httpOnly CSRF cookie, and sends `Cache-Control: no-store`. The frontend calls it at startup and after login, signup and logout.
+- Every `/api` answer, including `GET /api/csrf/restore`, is sent with `Cache-Control: no-store` (S29): answers depend on who is logged in and change when anyone edits, so browsers and CDNs must not reuse them.
+- `GET /api/csrf/restore` in **every** environment (S20): returns `200 { csrfToken }` and sets the httpOnly CSRF cookie. The frontend calls it at startup and after login, signup and logout.
 - Mounts the API router at `/api`.
-- **Production only:** serves `frontend/dist/index.html` (the Vite build) for `/` and any non-`/api` path via the Express 5 wildcard `'/{*splat}'`, and static files from `frontend/dist`. Unknown `/api/...` paths fall through to the JSON 404. No cookie is set here any more, which is what lets the build move to S3/CloudFront later.
+- **Production only:** `utils/staticFrontend.js` serves `frontend/dist/index.html` (the Vite build) for `/` and any non-`/api` path via the Express 5 wildcard `'/{*splat}'`, and static files from `frontend/dist`. Cache headers (S29): `/assets/*` (content-hashed file names) `public, max-age=31536000, immutable`; `index.html` `no-cache`; other files one day. Unknown `/api/...` paths fall through to the JSON 404. No cookie is set here any more, which is what lets the build move to S3/CloudFront later.
 
 ### 5.4 `backend/routes/api/index.js`
 
@@ -392,7 +401,7 @@ Legend: **Auth** = needs a logged-in user (`requireAuth`, else 401). **Owner** =
 | GET | `/api/songs/:songId` | no | - | `songs.js` | Song, Album, User | Song + `Album` (id, title, previewImage) + `Artist` (public user) |
 | PUT | `/api/songs/:songId` | yes | requireOwner | `songs.js` | Song | Updated song (only `title`, `description`, `previewImage` change) |
 | DELETE | `/api/songs/:songId` | yes | where-clause | `songs.js` | Song | `{ message: "Successfully deleted.", statusCode: 200 }` |
-| GET | `/api/songs/:songId/comments` | no | - | `songs.js` | Song, Comment, User | `{ Comments: [...] }`, each with `User` (id, username, previewImage) |
+| GET | `/api/songs/:songId/comments` | no | - | `songs.js` | Song, Comment, User | `{ Comments: [...] }` newest first (S34), each with `User` (id, username, previewImage) |
 | POST | `/api/songs/:songId/comments` | yes | - (any song) | `songs.js` | Song, Comment | The new comment |
 | PUT | `/api/comments/:commentId` | yes | where-clause | `comment.js` | Comment | Updated comment (only `body`) |
 | DELETE | `/api/comments/:commentId` | yes | where-clause | `comment.js` | Comment | `{ message: "Successfully deleted", statusCode: 200 }` |
@@ -433,6 +442,8 @@ Legend: **Auth** = needs a logged-in user (`requireAuth`, else 401). **Owner** =
 | GET | `/api/csrf/restore` | no (all environments) | - | `routes/index.js` -> `utils/csrf.js` | - | `200 { csrfToken }` + httpOnly CSRF cookie |
 
 Notes:
+- `POST /api/playlists/:playlistId/songs` answers `409 "That song is already in this playlist."` for a duplicate (S25).
+- `GET /api/songs/:songId` and `GET /api/albums/:albumId` load the artist in the same query with `include` (S26); the JSON still calls it `Artist`.
 - There is **no `POST /api/songs`**. A song can only be created inside an album: `POST /api/albums/:albumId/songs`.
 - Response shapes are inconsistent: some lists are plain arrays (`/api/albums`, `/api/playlists`, `/api/artists`), others are wrapped (`{ Songs }`, `{ Albums }`). Check the table before writing a reducer.
 - The `/api/artists/*` endpoints are not used by the frontend today.
@@ -445,7 +456,6 @@ Notes:
 - `setTokenCookie(res, user)`: signs a JWT (jsonwebtoken 9, HS256) containing `{ data: user.toSafeObject() }` (id, username, email) with `JWT_SECRET`, valid for `JWT_EXPIRES_IN` seconds (a number), and sets it as the `token` cookie with `maxAge` = seconds × 1000: `httpOnly` always, `secure` and `SameSite=Lax` in production.
 - `restoreUser(req, res, next)`: reads `req.cookies.token` (skips straight to `next()` if there is none), verifies it with `jwt.verify` allowing only `HS256`. If valid, loads the user with the `currentUser` scope into `req.user`. If invalid or expired, `req.user` stays `null` (no error; it's not a gatekeeper). If the user no longer exists, it clears the cookie.
 - `requireAuth`: an **array** `[restoreUser, check]`. The second function calls `next()` if `req.user` exists, otherwise creates a 401 "Authentication required" error. Because `routes/api/index.js` already runs `restoreUser`, routes with `requireAuth` actually verify the JWT and query the user **twice** per request.
-- `requireProperAuthorize` is an empty array and not exported (dead code).
 
 **`utils/csrf.js`** (added in S20)
 - Configures `csrf-csrf` (the "double-submit cookie" pattern) and exports `csrfProtection` (the middleware in `app.js`) and `restoreCsrf` (the `GET /api/csrf/restore` handler).
@@ -460,7 +470,6 @@ Notes:
 **`utils/validation.js`**
 - `handleValidationErrors`: reads `validationResult(req)` from express-validator. If there are errors, builds a 400 error with `errors: [messages]` and **returns** `next(err)` (the missing `return` was the S4 bug). Every `validateXxx` array in the routes ends with it.
 - `validateIdParam`: used with `router.param('songId', validateIdParam)` etc. Rejects ids that aren't positive integers with 400.
-- `forbiddenErr(next)`: builds a 403. Imported in `app.js` but never called.
 
 **`utils/pick.js`** (added in S3)
 - `pick(obj, allowedKeys)` copies only the listed keys that are defined. Update routes call `record.update(pick(req.body, [...]))`, so a client cannot change `userId`, `albumId`, `id`, etc.
@@ -475,14 +484,19 @@ Notes:
 - `uploadToS3(file)`: uploads with `@aws-sdk/lib-storage`'s `Upload` (multipart for big files) to `config.s3.bucket` with a key like `audio/<uuid>.mp3` or `images/<uuid>.png` and the right `ContentType`, and returns the key.
 - `publicUrlFor(key)` = `MEDIA_BASE_URL + "/" + key`; `singlePublicFileUpload(file)` returns that URL, which is what gets saved in the DB.
 - No `ACL: public-read`. New files are only publicly readable if the bucket has a public-read bucket policy or sits behind CloudFront (see CHANGES.md open question 2).
-- The unused private-upload and signed-URL helpers were removed in S18. `multiplePublicFileUpload` and `multipleMulterUpload` are still exported but unused.
+- Images (`image/*`) are processed by `optimizeImage` (S27) before upload: rotated by their EXIF tag, shrunk to at most 600 px on the longest side and saved as WebP (quality 80) with `sharp`; a file that is not really an image gets `400 "That file is not a valid image."`. Audio is stored as is.
+- Every object is uploaded with `CacheControl: public, max-age=31536000, immutable` (S29): the key is a random UUID, so a stored file never changes.
+- The unused private-upload and signed-URL helpers were removed in S18, and the unused `multiple*` helpers in X5.
+
+**`utils/staticFrontend.js`** (added in S29)
+- `serveFrontend(router, distDir)` mounts the production static serving with the cache rules described in 5.3; `cacheControlFor(path)` decides the header. Separate from `routes/index.js` so it can be tested without a database.
 
 **`backend/db/safety.js`** (added in S0)
 - `assertNotProduction(action)` throws "Refusing to ... because NODE_ENV=production" when `NODE_ENV=production`. Called by every migration's `down()`, the seeder's `down()` and `scripts/assert-not-production.js` (the first step of `npm run db:reset`).
 
 ### 5.7 Leftovers in route files
 
-Several route files still contain unused imports, including `const app = require('../../app')` (a circular import: `app.js` requires the routes, which require `app.js`). It is harmless at runtime because the value is never used, but it stops you from `require`-ing a route file on its own in a script. `users.js` also has `const { route } = require('./my')`, which is unused. These are lint cleanup (S47).
+X5 removed the circular `require('../../app')`, the unused model requires and the other dead code that earlier versions of this guide listed. What is still there is ordinary lint work (S47): unused names in some `require` lines, for example `setTokenCookie` and `restoreUser` in route files that only use `requireAuth`, and a block of commented-out code in `playlist.js`.
 
 ---
 
@@ -576,35 +590,36 @@ Vite starts from `frontend/index.html`, whose `<script type="module" src="/src/i
 1. `configureStore()` (from `store/index.js`) creates the Redux Toolkit store.
 2. `restoreCSRF()` fetches a CSRF token, in every environment (S20).
 3. In development only (`import.meta.env.DEV`): `csrfFetch`, `store` and `sessionActions` are put on `window` so you can test from the browser console (for example `window.store.getState()`).
-4. `createRoot(document.getElementById('root')).render(...)` (React 18 API, S22) renders `<Root/>` inside `<React.StrictMode>`. `<Root/>` wraps `<App/>` in three providers, outermost first: `Provider` (Redux), `ModalProvider` (modal portal target), `BrowserRouter` (React Router v7). In development StrictMode runs effects twice, so some requests appear twice in the Network tab.
+4. `createRoot(document.getElementById('root')).render(...)` (React 19, S22/X4) renders `<Root/>` inside `<React.StrictMode>`. `<Root/>` wraps `<App/>` in four providers, outermost first: `Provider` (Redux), `ToastProvider` (the toast messages, S33), `ModalProvider` (modal portal target) and `BrowserRouter` (React Router v7). In development StrictMode runs effects twice, so some requests appear twice in the Network tab.
+5. `index.css` (imported by `App.jsx` and `index.jsx`) pulls in the design system: `styles/tokens.css`, `base.css` and `states.css` (see 7.6).
 
 ### 7.2 `frontend/src/App.jsx`
 
 - On mount: `dispatch(getCurrUser()).then(() => setIsLoaded(true))`. Routes render only after this finishes, so pages never flash a logged-out view.
-- When `user` changes to a logged-in user: `dispatch(myPlaylists())` and `dispatch(myAlbums())`, which fill `state.session.playlists` and `state.session.albums`. Those lists feed the Home page, the album dropdown in Create Song, and the playlist dropdown in "+ to Playlist".
-- Always renders `<Navigation isLoaded/>` on top and `<Player/>` at the bottom. `Footer` is imported but never rendered.
+- When `user` changes to a logged-in user: `dispatch(myPlaylists())` and `dispatch(myAlbums())`, which fill `state.session.playlists` and `state.session.albums`. Those lists feed the Home page, the album dropdown in Create Song, and the playlist dropdown in "Add to playlist". Since X1 the session slice also follows create/update/delete actions of the other slices, so they stay current without a reload.
+- Renders, in order: a "Skip to content" link, `<Navigation isLoaded/>`, `<main id="main">` with the routes, `<Footer/>` and the always-present `<Player/>`. A `useEffect` on the path scrolls to the top on every page change.
 
-**Routes** (React Router v7 `<Routes>` with `<Route path=... element={<Page />} />`, S23. v7 picks the most specific match by itself, so order and `exact` don't matter; `path='*'` is the 404 page):
+**Routes** (React Router v7 `<Routes>` with `<Route path=... element={<Page />} />`; v7 picks the most specific match by itself, so order and `exact` don't matter; `path='*'` is the 404 page):
 
 | URL | Component | What it shows |
 |---|---|---|
-| `/songs/:songId` | `Songs/DisplaySongInfo.jsx` | A basic info card for one song (title, description, album id, URL, user id). Loads **all** songs via `getSongs()` and picks one. Nothing in the UI links here; you reach it only by typing the URL. |
-| `/albums/:albumId` | `Albums/DisplayAlbumInfo.jsx` | Album cover, artist avatar and name, its songs with play buttons. Owner sees Create Song, Update Album, Delete Album. Logged-in users see "+ to Playlist" on each song; owners also see Delete/Update Song. |
-| `/playlists/:playlistId` | `Playlists/DisplayPlaylistInfo.jsx` | Playlist cover, owner, songs with play buttons. Owner sees Update/Delete playlist and a Remove button per song. |
-| `/albums` | `Albums/Albums.jsx` | All albums. Owners get Create Song/Update/Delete on their own; logged-in users get Create Album. |
-| `/playlists` | `Playlists/Playlists.jsx` | All playlists (public list). Owners get Update/Delete; logged-in users get Create Playlist. |
-| `/songs` | `Songs/Songs.jsx` | Every song (newest first) with play buttons. Clicking a song title goes to its **album** page. Logged-in users get Create Song and "+ to Playlist"; owners get Delete/Update. |
-| `/signup` | `SignupFormPage/SignupFormPage.jsx` | Signup form with optional profile image. Redirects to `/` if already logged in. |
-| `/` | `HomePage/HomePage.jsx` | Logged out: a "Get Started Today" splash. Logged in: your profile info, Create Album/Playlist buttons, and tiles of your playlists, albums and songs. |
-| `*` (anything else) | `PageNotFound/index.jsx` | 404 page with a "Back to Home" button. |
+| `/songs/:songId` | `Songs/DisplaySongInfo.jsx` | Song page (S34): cover, title, artist, album link, play button, "Add to playlist", and the **comments** (`Comments/Comments.jsx`). Loads one song with `showSong()`. |
+| `/albums/:albumId` | `Albums/DisplayAlbumInfo.jsx` | Album header (blurred cover, artist, description) and a track list with play buttons. Owner sees Create Song, Update Album, Delete Album. Logged-in users see "Add to playlist" on each song; owners also see Update/Delete Song. |
+| `/playlists/:playlistId` | `Playlists/DisplayPlaylistInfo.jsx` | Playlist header, owner, track list. Owner sees Update/Delete playlist and "Remove from playlist" per song. |
+| `/albums` | `Albums/Albums.jsx` | Card grid of all albums. Owners get Create Song/Update/Delete on their own; logged-in users get Create Album. |
+| `/playlists` | `Playlists/Playlists.jsx` | Card grid of all playlists (public list). Owners get Update/Delete; logged-in users get Create Playlist. |
+| `/songs` | `Songs/Songs.jsx` | Card grid of every song (newest first) with play buttons; the title links to the song page. Logged-in users get Create Song and "Add to playlist"; owners get Update/Delete. |
+| `/signup` | `SignupFormPage/SignupFormPage.jsx` | Sign-up form with labels and an optional profile image, plus "Try the demo instead". Redirects to `/` if already logged in. |
+| `/` | `HomePage/HomePage.jsx` | Logged out: the welcome hero ("Try the demo", "Create an account", log-in link) and a "Fresh albums" grid. Logged in: your name and avatar, Create Album/Playlist buttons, and your albums, playlists and songs (with empty states). |
+| `*` (anything else) | `PageNotFound/index.jsx` | 404 page with buttons back to Home and Songs. The album, playlist and song pages reuse it as "Album not found" etc. when the server answers 404/400. |
 
-Navigation in code uses `const navigate = useNavigate(); navigate('/songs')` (was `useHistory().push` in v5), always from event handlers, and `SignupFormPage` redirects with `<Navigate to='/' replace />`.
+Navigation in code uses `const navigate = useNavigate(); navigate('/songs')`, always from event handlers, and `SignupFormPage` redirects with `<Navigate to='/' replace />`.
 
-The nav links to Songs, Albums and Playlists appear only when logged in (`Navigation.jsx`), but the pages themselves work logged out too.
+The nav (`Navigation.jsx`) shows Home, Songs, Albums and Playlists to everybody (the pages are public). At 900px wide and below the top links are replaced by a bottom tab bar (S30).
 
 ### 7.3 Redux store
 
-`frontend/src/store/index.js` calls Redux Toolkit's `configureStore({ reducer: { session, songs, albums, player, artists, playlists }, preloadedState, devTools: import.meta.env.DEV })` (S24). That gives you, with no extra code: the thunk middleware (so every `async (dispatch) => ...` action creator works), the Redux DevTools browser extension in development, and development-only checks that throw if a reducer mutates state and warn on non-serializable values. `redux-logger` is gone; use the DevTools extension to watch actions. The reducers themselves are still the original hand-written `switch` reducers (converting them to `createSlice` is an optional follow-up).
+`frontend/src/store/index.js` calls Redux Toolkit's `configureStore({ reducer: { session, songs, albums, playlists, comments, player }, preloadedState, devTools: import.meta.env.DEV })` (S24). That gives you the thunk middleware (so every `async (dispatch) => ...` action creator works), the Redux DevTools browser extension in development, and development-only checks that throw if a reducer mutates state and warn on non-serializable values. Since X4 **every slice file uses `createSlice`**: you write reducers that look like they change the state, and Immer (built into RTK) turns that into a new immutable state. A slice file exports its reducer as the default export, and its thunks and action creators by name.
 
 ```mermaid
 flowchart TB
@@ -612,14 +627,18 @@ flowchart TB
     S --> songs["songs: { id: song }"]
     S --> albums["albums: currentAlbum{}, albums{}"]
     S --> playlists["playlists: currentPlaylist{}, playlists{}"]
-    S --> player["player: { song }"]
-    S --> artists["artists (unused)"]
-    PS["store/playlistSongs.js: thunks only, NOT in the store"] -.-> playlists
+    S --> comments["comments: bySong{ songId: [comment] }"]
+    S --> player["player: song, queue[], index"]
+    albums -. "create / update / remove actions" .-> session
+    playlists -. "create / update / delete actions" .-> session
+    songs -. "create / update / remove actions" .-> session
+    albums -. "album removed" .-> songs
 ```
+
+The dotted arrows are the `extraReducers` added in X1: the session slice listens to the other slices' actions and mirrors them in the user's own lists, which is why a new album shows up on the Home page and in dropdowns immediately.
 
 **`store/session.js`**: the logged-in user and *their own* content.
 - State: `{ user: null, playlists: [], songs: [], albums: [] }` (arrays, not id maps).
-- Action creators: `setSessionUser`, `removeSessionUser`, `signUpNewUser`, `getMyPlaylists`, `getMyAlbums`, `getMySongs`.
 
 | Thunk | Calls | Stores |
 |---|---|---|
@@ -629,11 +648,9 @@ flowchart TB
 | `logoutUser()` | `DELETE /api/session/logout` | clears everything |
 | `myPlaylists()` | `GET /api/my/playlists` | `playlists` |
 | `myAlbums()` | `GET /api/my/albums` | `albums` |
-| `mySongs()` | `GET /api/my/songs` | `songs` (called by `HomePage`) |
+| `mySongs()` | `GET /api/my/songs` | `songs` (called by the Home page) |
 
-**`store/songs.js`**: every song, keyed by id.
-- State: `{ [id]: song }`.
-- Actions: `GET_SONGS` (replaces everything), `CREATE_SONG`, `UPDATE_SONG`, `REMOVE_SONG`, `SHOW_SONG`.
+**`store/songs.js`**: every song, keyed by id. State: `{ [id]: song }`.
 
 | Thunk | Calls |
 |---|---|
@@ -641,25 +658,22 @@ flowchart TB
 | `createAddSong({ albumId, title, description, url })` | `POST /api/albums/:albumId/songs` (FormData; `url` is the **File**, not a URL) |
 | `updateSong(data)` | `PUT /api/songs/:songId` |
 | `removeSong(songId)` | `DELETE /api/songs/:songId` |
-| `showSong(songId)` | `GET /api/songs/:songId` (exported but never used) |
+| `showSong(songId)` | `GET /api/songs/:songId` (used by the song page, S26) |
+
+When an album is removed, the slice also drops that album's songs.
 
 **`store/albums.js`**
-- State: `{ currentAlbum: { [id]: album }, albums: { [id]: album } }`. Despite its name, `currentAlbum` is a **map keyed by id**, and the detail page reads `state.albums.currentAlbum[albumId]`.
+- State: `{ currentAlbum: { [id]: album }, albums: { [id]: album } }`. Despite its name, `currentAlbum` is a **map keyed by id** of albums opened on their own page (with `Songs` and `Artist`); `albums` is the list.
 - Thunks: `getAlbums()` -> `GET /api/albums`; `createAlbum(data)` -> `POST /api/albums`; `updateAlbum(data)` -> `PUT /api/albums/:albumId`; `removeAlbum(id)` -> `DELETE /api/albums/:albumId`; `showAlbum(id)` -> `GET /api/albums/:albumId`.
-- Quirks: `CREATE_ALBUM` sets `currentAlbum` to `null`. `SHOW_ALBUM` used to write into the existing `currentAlbum` object (a state mutation, and a crash when it was `null`); since S24 it copies it, because RTK's dev check throws on mutations.
+- Since X4 creating an album no longer sets `currentAlbum` to `null`, and updating merges into the cached full album instead of replacing the whole map.
 
-**`store/playlists.js`**: same shape and quirks as albums.
-- State: `{ currentPlaylist: { [id]: playlist }, playlists: { [id]: playlist } }`.
-- Thunks: `getPlaylists()` -> `GET /api/playlists`; `createPlaylist` -> `POST /api/playlists`; `updatePlaylist` -> `PUT /api/playlists/:playlistId`; `deletePlaylist` -> `DELETE /api/playlists/:playlistId`; `showPlaylist` -> `GET /api/playlists/:playlistId`.
+**`store/playlists.js`**: same shape: `{ currentPlaylist: { [id]: playlist }, playlists: { [id]: playlist } }`; thunks `getPlaylists`, `createPlaylist`, `updatePlaylist`, `deletePlaylist`, `showPlaylist`.
 
-**`store/playlistSongs.js`**: thunks without a reducer.
-- `addSongToPlaylist({ songId, playlistId })` -> `POST /api/playlists/:playlistId/songs`.
-- `removeSongFromPlaylist({ playlistId, songId })` -> `DELETE /api/playlists/:playlistId/songs/:songId`.
-- They dispatch `playlistSongs/ADD_SONG` / `REMOVE_SONG`, but **no reducer handles these** and the file isn't in `combineReducers`. The UI stays correct only because `DeletePlaylistSong` re-fetches the playlist with `showPlaylist()` afterwards, and the playlist page always re-fetches when you open it.
+**`store/comments.js`** (S34): `{ bySong: { [songId]: [comment, ...] } }`, newest first, each comment with its `User`. Thunks: `getComments(songId)`, `createComment({ songId, body })` (adds the logged-in user as author), `updateComment({ commentId, body })`, `removeComment({ songId, commentId })`.
 
-**`store/player.js`**: `{ song: null }`. `playSong(song)` is a plain action (no API call). `Player.jsx` reads `state.player.song` and passes `song.url` to `react-h5-audio-player`.
+**`store/playlistSongs.js`**: thunks only, **not a slice**: `addSongToPlaylist({ songId, playlistId })` -> `POST /api/playlists/:playlistId/songs` and `removeSongFromPlaylist({ playlistId, songId })` -> `DELETE .../songs/:songId`. They return the JSON and change nothing in the store; pages re-fetch the playlist (`showPlaylist`) afterwards.
 
-**`store/artists.js`**: `getArtists()` -> `GET /api/artists`, but nothing calls it. (Its unused `bindActionCreators` import was removed in S24.)
+**`store/player.js`** (S28): `{ song, queue, index }`. `playSong(song, list?, artistName?)` makes `list` the queue; `playNext()` / `playPrevious()` move through it. The player bar reads it.
 
 ### 7.4 `store/csrf.js`
 
@@ -674,14 +688,28 @@ flowchart TB
 
 ### 7.5 Key components
 
-- **`context/Modal.jsx`**: `ModalProvider` renders an empty `<div>` after the app and shares it through context. `<Modal onClose>` uses `ReactDOM.createPortal` to render its children into that div, with a background that calls `onClose` when clicked. Every `XxxModal.jsx` file follows the same pattern: a button sets `showModal`, and the form gets `setShowModal` so it can close itself.
-- **`Navigation/Navigation.jsx`**: logged out shows Log In (modal), Signup link, Demo button; logged in shows Home/Songs/Albums/Playlists links and `ProfileButton` (avatar dropdown with Log Out).
-- **`DemoUser/DemoUser.jsx`**: a button that dispatches `loginUser({ credential: 'Demo-lition', password: 'password' })`.
-- **`ImageComponent/ImageComponent.jsx`**: a mini form inside Create Album and Create Playlist. It uploads the chosen image to `POST /api/images/upload` right away and passes the returned URL up through `setUrl`. The album/playlist is then created with that URL as JSON. So creating an album is a **two-request** flow. It calls `csrfFetch` directly (no thunk) and has no `catch`, so a failed upload only stops the "Uploading..." text.
-- **`Player/Player.jsx`**: always mounted at the bottom; plays whatever is in `state.player.song`.
-- **`HomePage/MyPlaylists.jsx`** is never imported anywhere (dead code).
+- **`context/Modal.jsx`** (S31): `ModalProvider` renders an empty `<div>` after the app and shares it through context. `<Modal onClose title>` renders into that div with `ReactDOM.createPortal`: `role="dialog"`, `aria-modal`, `aria-labelledby` the visible title, a Close button, Escape to close, focus moved in and trapped, everything else `inert` and not scrollable, focus returned to the opener on close. Every `XxxModal.jsx` file follows the same pattern: a button sets `showModal`, and the form gets `setShowModal` so it can close itself.
+- **`Navigation/Navigation.jsx`**: wordmark, the four links, session controls (Log in, Sign up, **Try the demo**, or the profile menu) and the phone tab bar. `ProfileButton` is a real menu button (`aria-expanded`, closes on Escape).
+- **`DemoUser/DemoUser.jsx`**: a button (styled by the `className` it receives) that dispatches `loginUser(DEMO_CREDENTIALS)`; failures show as a toast. Used in the nav, the welcome hero, the sign-up page, the login dialog, the empty states and the comment prompt.
+- **`ImageComponent/ImageComponent.jsx`**: a mini form inside Create Album and Create Playlist. It uploads the chosen image to `POST /api/images/upload` right away (the server shrinks it to WebP, S27) and passes the returned URL up through `setUrl`. Creating an album is therefore a **two-request** flow. Upload errors are shown under the button.
+- **`Player/Player.jsx`**: fixed to the bottom of the window on every page. Left: cover, title (links to the song page) and artist of `state.player.song`; right: `react-h5-audio-player` 3.10 skinned with the tokens, with previous/next when the queue has more than one song. With nothing chosen it says "Pick a song to start listening." and its controls are inert.
+- **`common/`** (S33/S35): `Cover` (images with size hints, lazy loading and a fallback tile), `Logo`, `PlayButton` (real button, "Play {title}"), `Toast` (`ToastProvider`, `useToast()` with `.success()` / `.error()`), `States` (`SkeletonGrid`, `SkeletonDetail`, `EmptyState`, `ErrorState`), `useLoad(fn, deps)` (status `loading | ready | error`, plus `notFound`, `reload`) and `usePageTitle`.
+- **`Comments/Comments.jsx`** (S34): the list and form on the song page, with inline edit and delete for the author.
+- **`Footer`**: one line about the project plus GitHub and LinkedIn links.
 
 Frontend-side ownership checks (`user?.id === album.userId` and so on) only **hide buttons**. The real protection is on the backend.
+
+### 7.6 The design system (S35)
+
+Everything visual is driven by CSS variables in `styles/tokens.css`; change a value there and the whole app follows.
+
+- **Theme "dusk":** dark blue-plum surfaces (`--bg #12101A`, `--surface #1D1A29`, `--surface-raised #272336`), text `#F4F0FA`, secondary text `#B3ABC4`, and **one accent, haze rose `#FF7AA2`** (with dark text on it). The contrast numbers are written next to each token.
+- **Fonts:** Fraunces for headings and Hanken Grotesk for everything else, both open-licensed and installed as npm packages (`@fontsource-variable/*`), so no request goes to Google.
+- **Scales:** type (13 to 48 px plus a fluid display size), spacing (4 px grid, `--space-1..9`), radius (`--radius-xs..lg`, `--radius-pill`), layout sizes (`--nav-height`, `--player-height`, `--tabbar-height`), motion and z-index layers.
+- **The haze:** covers are blurred into soft mist behind the welcome headline and behind album, playlist and song headers (`.hero-haze`, `.detail-header .haze`).
+- **Building blocks** in `base.css`: `.btn` (+ `-primary`, `-secondary`, `-ghost`, `-danger`, `-sm`, `-lg`), `.form` / `.field`, `.error-list`, `.grid` + `.tile` (cards), `.tracklist` + `.track` (rows), `.play-btn`, `.skeleton`. Component CSS only adds what is specific to one component.
+- **Responsive:** `@media` rules at 1023px (hide the header Sign up button), 900px (tab bar), 720px (stack headers and track rows, compact player), 600px (modal becomes a bottom sheet) and 480px (two-column cards, full-width hero buttons).
+- **Accessibility defaults:** 16 px base text, a 3 px white focus ring for keyboard users, 44 px buttons, `prefers-reduced-motion` support, `aria-live` form errors, a skip link and one `<h1>` per page.
 
 ---
 
@@ -690,7 +718,7 @@ Frontend-side ownership checks (`user?.id === album.userId` and so on) only **hi
 ### 8a. Logging in as the demo user
 
 1. **`frontend/src/components/Navigation/Navigation.jsx`**: logged out, so it renders `<DemoUser/>`.
-2. **`components/DemoUser/DemoUser.jsx`**, `handleClick`: `e.preventDefault()`, builds `{ credential: 'Demo-lition', password: 'password' }`, calls `dispatch(loginUser(user))`. (There is no `.catch`, so if login fails, for example with 429 from the rate limiter, the error only shows up as an unhandled promise rejection in the console.)
+2. **`components/DemoUser/DemoUser.jsx`**, `handleClick`: `e.preventDefault()`, calls `dispatch(loginUser(DEMO_CREDENTIALS))` with the one shared credentials constant. If login fails (for example 429 from the rate limiter) a `.catch` reads the server message with `getErrorMessages` and shows it as an error toast.
 3. **`store/session.js`**, `loginUser`: `csrfFetch('/api/session/login', { method: 'POST', body: JSON.stringify(user) })`.
 4. **`store/csrf.js`**, `csrfFetch`: adds `Content-Type: application/json` and `X-CSRF-Token` (the in-memory token from startup), calls `fetch`.
 5. Vite dev server (port 3000) proxies `/api` to Express (port 5000).
@@ -707,7 +735,7 @@ Frontend-side ownership checks (`user?.id === album.userId` and so on) only **hi
 Starting from an album page you own, for example `/albums/2` as the demo user.
 
 1. **`components/Albums/DisplayAlbumInfo.jsx`**: `checkValidation(album)` sees `user?.id === album.userId` and renders `<CreateSongModal album={album} userId={user?.id}/>`.
-2. **`components/CreateSong/CreateSongModal.jsx`**, `handleClick`: sets `showModal` to true and renders `<Modal><CreateSong albumId={album.id} setShowModal/></Modal>`. (Small bug: if you are *not* the owner it shows an alert and then opens the modal anyway, because `setShowModal(true)` also runs after the `if`. The backend still refuses with 403.)
+2. **`components/CreateSong/CreateSongModal.jsx`**, `handleClick`: sets `showModal` to true and renders `<Modal><CreateSong albumId={album.id} setShowModal/></Modal>`. (Fixed in X2: if you are *not* the owner it shows the "no access" alert and returns, so the modal no longer opens afterwards. The backend would refuse with 403 anyway.)
 3. **`components/CreateSong/CreateSong.jsx`**: the user types a title and description and picks a file; `updateSongFile` stores the `File` object in `audioUrl` state. `handleSubmit` builds `{ title, description, url: audioUrl, albumId }` and runs `await dispatch(createAddSong(data))` inside `try`.
 4. **`store/songs.js`**, `createAddSong`: builds a `FormData` (`title`, `description`, `url` = the file, `albumId`) and calls `csrfFetch('/api/albums/2/songs', { method: 'POST', headers: { 'Content-Type': 'multipart/form-data' }, body })`.
 5. **`store/csrf.js`**: deletes the `Content-Type` header (so the browser sets the multipart boundary), adds `X-CSRF-Token`, sends the request.
@@ -721,7 +749,7 @@ Starting from an album page you own, for example `/albums/2` as the demo user.
    - the handler: 400 if `!req.file`; `singlePublicFileUpload(req.file)` -> `uploadToS3` -> `new Upload({ client: s3, params: { Bucket: S3_BUCKET, Key: 'audio/<uuid>.mp3', Body, ContentType } }).done()` (AWS SDK v3) and returns `MEDIA_BASE_URL/audio/<uuid>.mp3`; `Song.create({ title, description, url, previewImage: album.previewImage, albumId, userId })`; `res.json(song)`.
 9. **`store/songs.js`**: `dispatch(createSongAction(newSong))`; `songsReducer` adds it under its id.
 10. **`CreateSong.jsx`**: clears the form, `setShowModal(false)`, `navigate('/songs')`. On any error, the `catch` shows `getErrorMessages(response)` in the modal (for example "File is too large. The limit is 20 MB.").
-11. **`components/Songs/Songs.jsx`** mounts and re-fetches everything with `getSongs()`; the new song appears at the top (the list is reversed).
+11. **`components/Songs/Songs.jsx`** mounts and re-fetches everything with `getSongs()` (showing a skeleton grid while it loads); the new song appears first (newest first).
 
 ```mermaid
 sequenceDiagram
@@ -750,21 +778,21 @@ sequenceDiagram
     T-->>C: createSongAction, then close modal and go to /songs
 ```
 
-**If you start from the `/songs` page instead**, `CreateSongModal` gets no `album`, so `CreateSong` shows an album dropdown built from `state.session.albums` (filled by `myAlbums()` in `App.jsx`). From reading the code: an album you just created does **not** appear in that dropdown until the page reloads, because `createAlbum` updates `state.albums`, not `state.session.albums`.
+**If you start from the `/songs` page instead**, `CreateSongModal` gets no `album`, so `CreateSong` shows an album dropdown built from `state.session.albums` (filled by `myAlbums()` in `App.jsx`). Since X1 an album you just created appears in that dropdown at once: the session slice's `extraReducers` also listen to `createAlbum`, `updateAlbum` and `removeAlbum`, so `state.session.albums` stays current.
 
 ### 8c. Adding a song to a playlist
 
 1. **`components/Songs/Songs.jsx`** (or `DisplayAlbumInfo.jsx`): for a logged-in user, `checkValidation(song)` renders `<AddSongModal songId={song.id}/>` ("+ to Playlist").
 2. **`components/Playlists/AddSongModal.jsx`**: the button opens `<Modal><AddSong songId setShowModal/></Modal>`.
-3. **`components/Playlists/AddSong.jsx`**: builds a `<select>` from `state.session.playlists` (your playlists, from `myPlaylists()` in `App.jsx`). On submit: `dispatch(addSongToPlaylist({ songId, playlistId: parseInt(playlistId) })).then(() => setShowModal(false))`.
+3. **`components/Playlists/AddSong.jsx`**: builds a `<select>` from `state.session.playlists` (your playlists, from `myPlaylists()` in `App.jsx`). On submit: `await dispatch(addSongToPlaylist({ songId, playlistId }))` inside `try`, then `setShowModal(false)` and a success toast. The submit button is disabled until a playlist is chosen.
 4. **`store/playlistSongs.js`**, `addSongToPlaylist`: `csrfFetch('/api/playlists/' + playlistId + '/songs', { method: 'POST', body: JSON.stringify(data) })`.
 5. **Backend**: `app.js` chain -> `restoreUser` -> **`routes/api/playlist.js`**: `router.param('playlistId', validateIdParam)` -> `requireAuth` -> `validatePlaylistSong` (`songId` must be a positive integer) -> handler:
    - `Playlist.findOne({ where: { userId: user.id, id: playlistId } })` (ownership by where-clause: someone else's playlist gives 404),
    - `Song.findByPk(songId)`,
-   - `PlaylistSong.create({ playlistId, songId })`,
+   - `PlaylistSong.findOrCreate({ where: { playlistId, songId } })`. If the pair already exists the route answers **409 "That song is already in this playlist."** (the unique index from S25 backs this up),
    - re-reads it with `PlaylistSong.scope('addSongs')` and returns `{ id, songId, playlistId }`.
-6. **`store/playlistSongs.js`**: dispatches `addPlaylistSongAction(...)`, which **no reducer handles**. Nothing in the store changes.
-7. **`AddSong.jsx`**: closes the modal. There is no `catch`, so on an error (for example no playlist selected gives `playlistId` = `NaN`, and the URL becomes `/api/playlists/NaN/songs`, which returns 400) the modal just stays open with no message.
+6. **`store/playlistSongs.js`**: returns the JSON and dispatches nothing (no slice holds join rows).
+7. **`AddSong.jsx`**: on success it closes the modal. On an error (including the 409 for a duplicate) the `catch` shows the server's message in the modal's `aria-live` error list and the modal stays open.
 8. When you open **`/playlists/:playlistId`**, `DisplayPlaylistInfo.jsx` dispatches `showPlaylist(playlistId)`, `GET /api/playlists/:playlistId` includes the `Songs` through the join table, and the new song is listed.
 
 ---
@@ -785,9 +813,14 @@ First move for almost anything: open the browser **Network** tab, click the fail
 | **Upload fails: 500 "Could not load credentials from any providers" / "Access Denied" / "NoSuchBucket"** | Your AWS CLI profile (`AWS_PROFILE`) or the EC2 IAM role, `backend/.env` (`S3_BUCKET`, `AWS_REGION`), `config/index.js` (`s3`) | No credentials found by the SDK, missing S3 permissions, wrong region, or the bucket is gone. |
 | **Upload works but the song won't play / image is broken (403 from S3)** | S3 bucket policy (AWS console), `awsS3.js` | Since S8 uploads have no `public-read` ACL. The bucket needs a policy allowing public `s3:GetObject` (or CloudFront later). Also check `media-src`/`img-src` in the CSP in `app.js` (production only). |
 | **Page blank after refresh** | `App.jsx` (`isLoaded`), `store/session.js` (`getCurrUser`), backend running? | Routes render only after `GET /api/my` finishes. If the backend is down, `csrfFetch` rejects, `isLoaded` never becomes true, and only the nav and player show. Check the console. |
-| **Detail page blank or crashes** | `DisplayAlbumInfo.jsx`, `DisplayPlaylistInfo.jsx`, `store/albums.js` / `store/playlists.js` (`SHOW_*`, `CREATE_*`) | The page reads `currentAlbum[albumId]`. If `currentAlbum` is `null` (set by `CREATE_ALBUM`/`CREATE_PLAYLIST`) the selector throws. Also check the API actually returned the album (404?). |
-| **New album/playlist missing from Home page or dropdowns** | `App.jsx` (`myAlbums`/`myPlaylists` run only when `user` changes), `store/session.js` | Create thunks update the `albums`/`playlists` slices, not `session.albums`/`session.playlists`. Reload, or dispatch `myAlbums()`/`myPlaylists()` after creating. |
-| **Error message not shown in a form** | The component's `catch`, `store/csrf.js` (`getErrorMessages`) | `csrfFetch` throws the raw `Response`; you must `await res.json()` (that's what `getErrorMessages` does). `AddSong.jsx`, `DemoUser.jsx`, `DeleteSong.jsx` and `ImageComponent.jsx` have no proper `catch`. |
+| **Detail page shows "not found" or an error with a Try again button** | `DisplayAlbumInfo.jsx`, `DisplayPlaylistInfo.jsx`, `DisplaySongInfo.jsx`, `common/useLoad.js` | Since S33/X4 the pages use `useLoad`: 404/400 gives the not-found page, anything else the error state. Open the Network tab to see which request failed. (The old crash from `currentAlbum` being `null` is gone.) |
+| **New album/playlist/song missing from Home page or dropdowns** | `store/session.js` (`extraReducers`), the slice's create thunk | Since X1 the session slice mirrors create/update/delete actions from the albums, playlists and songs slices. If something is missing, check the Redux DevTools to see that the action was dispatched and the request succeeded. |
+| **Error message not shown in a form** | The component's `catch`, `store/csrf.js` (`getErrorMessages`) | `csrfFetch` throws the raw `Response`; you must `await res.json()` (that's what `getErrorMessages` does). Since X2 every form and delete button has a `catch` that shows the server's message in an error list or a toast; a new component should do the same. |
+| **Fonts look wrong / a request goes to Google Fonts** | `frontend/src/index.css`, `styles/tokens.css`, `package.json` | Fonts are npm packages (`@fontsource-variable/fraunces`, `.../hanken-grotesk`) imported in `index.css`; re-run `npm install` in `frontend/` if they are missing. |
+| **Colours or spacing look off everywhere** | `frontend/src/styles/tokens.css` | All colours, sizes and spacing are variables there. Change the value once instead of overriding in a component. |
+| **Layout breaks on a phone** | `styles/base.css`, `styles/pages.css`, the component's CSS (`@media` at 1023/900/720/600/480 px) | The tab bar appears at 900px, the player compacts at 720px and modals become bottom sheets at 600px. Test with the browser's device toolbar at 375px. |
+| **Skeleton never goes away, or a toast doesn't appear** | `common/useLoad.js`, `common/Toast.jsx`, `index.jsx` | `useLoad` stays in `loading` until its promise settles. `useToast()` only works inside `ToastProvider` (set in `index.jsx`). |
+| **Old assets after a deploy** | `backend/utils/staticFrontend.js` | `index.html` is `no-cache`; `/assets/*` has hashed names and is cached for a year. A stale page means `index.html` itself was cached by something in front (CDN). |
 | **429 "Too many attempts"** | `utils/rateLimit.js` | More than 10 login (or signup) attempts per minute from your IP. The Demo button counts too. Wait a minute or restart the backend (counters are in memory). |
 | **Backend won't start: "Database connection failure."** | `backend/.env` (`DB_FILE`), `config/database.js`, `bin/www` | `DB_FILE` missing or the path is wrong; in production `DATABASE_URL`/SSL settings. |
 | **Backend won't start: "JWT_SECRET is not set" / "JWT_EXPIRES_IN must be a whole number"** | `backend/.env`, `utils/auth.js` | Startup checks added in S15. Set `JWT_SECRET`; use seconds for `JWT_EXPIRES_IN` (e.g. `604800`). |
@@ -799,7 +832,7 @@ First move for almost anything: open the browser **Network** tab, click the fail
 
 ---
 
-## 10. What changed in Batches 1 and 2, and what's coming
+## 10. What changed in Batches 1 to 3, and what's coming
 
 Full details, including how each change was verified, are in [`CHANGES.md`](../CHANGES.md).
 
@@ -834,25 +867,41 @@ Full details, including how each change was verified, are in [`CHANGES.md`](../C
 - **S23** react-router v7 (`Routes`, `element`, `useNavigate`, `Navigate`).
 - **S24** Redux Toolkit `configureStore` (thunk + DevTools built in, redux-logger removed).
 
+**Batch 3 (S25 to S35, X1 to X5): performance, UI/UX and clean-up.**
+
+- **S25** Database indexes on the foreign keys plus a unique `(playlistId, songId)` (migration `20261124000000-add-indexes.js`, which removes duplicate join rows first); adding a duplicate song to a playlist now answers 409.
+- **S26** Fewer queries: the song and album detail routes use one `include`, the artist counts run in parallel, comments have a stable order.
+- **S27** Uploaded images are rotated, shrunk to 600 px and stored as WebP (sharp); a non-image gives 400. Covers get size hints and lazy loading.
+- **S28** The player has a queue (`store/player.js`), previous/next, and shows what is playing.
+- **S29** Caching: uploads get a one-year `Cache-Control`, built `/assets/*` are immutable, `index.html` is `no-cache`, API responses are `no-store`.
+- **S30** Responsive layout (down to 375px) with a bottom tab bar on phones.
+- **S31** Accessible modals (dialog role, focus trap, Escape, focus return) and real buttons, labels and alt text.
+- **S32** Navigation shows the main pages to everyone; demo login is prominent.
+- **S33** Skeleton, empty and error states (`useLoad`, `States`) and toasts.
+- **S34** Song page with comments (`store/comments.js`).
+- **S35** The new visual design: tokens, fonts, haze, the card grids and a persistent player bar (section 7.6). No logo, colour or text is borrowed from another service.
+- **X1** New albums, playlists and songs appear immediately (session slice `extraReducers`).
+- **X2** Server errors are shown instead of swallowed; Create Song no longer opens after the "no access" alert.
+- **X3** sqlite3 6 (needs glibc 2.38 or newer for the prebuilt binary), `@faker-js/faker` removed, `npm audit fix` in the frontend.
+- **X4** Every store file is a `createSlice` slice; React 19.
+- **X5** Dead code removed (circular `require('../../app')`, unused imports and helpers).
+
 CHANGES.md also lists **open questions** for you and every **deviation from the plan**.
 
 **What's coming** (see [`MODERNIZATION_PLAN.md`](../MODERNIZATION_PLAN.md)):
 
-- **Performance:** DB indexes and a unique `(playlistId, songId)`, fewer wasted queries, image and player tweaks, caching headers (S25 to S29).
-- **UI/UX:** responsive layout, accessible modals, real buttons and alt text, loading/empty/error states, a song detail page with comments, a visual refresh (S30 to S35).
-- **Deployment:** env-only config (DB SSL optional), the rest of the Postgres-safety item S37, health check and API-only server, Dockerfile, docker-compose, Terraform for EC2 + S3 + CloudFront, deploy scripts, backups (S36 to S45).
+- **Deployment:** env-only config (DB SSL optional), the rest of the Postgres-safety item S37, health check and API-only server, Dockerfile, docker-compose, Terraform for EC2 + S3 + CloudFront, deploy scripts, backups (S36 to S45). Note that the Docker base image needs glibc 2.38 or newer (or a source build) for sqlite3 6.
 - **Testing and CI:** backend API tests, lint, frontend tests (Vitest), GitHub Actions, an end-to-end smoke test (S46 to S51).
 - **Docs:** `.env.example`, a new README, an AWS walkthrough (S52 to S55).
-- **Optional follow-ups from S24:** convert the store files to `createSlice`, then React 19.
 
-Remaining oddities called out in this guide (unused imports, the circular `require('../../app')`, 404-vs-403 inconsistency) are scheduled for S47 (lint) and later items.
+Remaining oddities (a unique-title violation returns 500 instead of 409, 404-vs-403 inconsistency on some routes, 7 moderate backend audit findings that need breaking upgrades) are listed in CHANGES.md.
 
 ---
 
 ## 11. Interview prep
 
 **1. Walk me through the architecture.**
-It's a React + Redux single-page app talking to an Express REST API that uses Sequelize over SQLite in development and Postgres in production. Components dispatch thunks, the thunks call the API through a small `csrfFetch` wrapper, and reducers store the JSON in normalized slices (songs keyed by id, for example). Audio and images are uploaded through multer to S3, and only the S3 URL is stored in the database.
+It's a React + Redux single-page app talking to an Express REST API that uses Sequelize over SQLite in development and Postgres in production. Components dispatch thunks, the thunks call the API through a small `csrfFetch` wrapper, and `createSlice` reducers store the JSON in normalized slices (songs keyed by id, for example). Audio and images are uploaded through multer to S3, and only the S3 URL is stored in the database.
 
 **2. How does authentication work?**
 On login, `User.login` checks the bcrypt hash and `setTokenCookie` signs a JWT with the user's id, username and email and puts it in an `httpOnly` cookie, so JavaScript can't read it. A `restoreUser` middleware runs on every `/api` request, verifies the cookie and loads `req.user`. Protected routes add `requireAuth`, which returns 401 when there is no user. On page load the frontend calls `GET /api/my` to restore the session.
@@ -904,9 +953,18 @@ I already replaced the deprecated pieces (`csurf`, AWS SDK v2, Create React App,
 | **Redux store** | The single object holding all client state. |
 | **Slice** | One top-level key of the store and its reducer file (`session`, `songs`, ...). |
 | **Action / action creator** | A plain object `{ type, payload }` describing what happened / a function that returns one. |
-| **Reducer** | A pure function `(state, action) => newState`. Must not mutate the old state. |
+| **Reducer** | A pure function `(state, action) => newState`. Must not mutate the old state (in a `createSlice` reducer you may *write* as if mutating, because Immer makes the copy). |
+| **Immer** | The library inside Redux Toolkit that turns "mutating" code in a `createSlice` reducer into a new immutable state. |
+| **`extraReducers`** | A slice's way to react to actions defined elsewhere (the session slice listens to album/playlist/song actions). |
+| **Design tokens** | The CSS variables in `styles/tokens.css` (colours, type scale, spacing, radii) that every component uses. |
+| **Haze** | This app's signature look: the cover art blurred into soft colour behind the hero and detail headers. |
+| **Skeleton** | A grey placeholder shape shown while data loads, so the layout doesn't jump. |
+| **Toast** | A short message that appears and fades (`useToast()`), e.g. "Added to playlist". |
+| **`inert`** | An HTML attribute that makes a part of the page unclickable and invisible to assistive tech; the modal sets it on everything behind the dialog. |
+| **Database index** | A lookup structure on a column (e.g. `songs.albumId`) that makes filtering and joining fast. Added in S25. |
+| **Immutable caching** | `Cache-Control: ... immutable` on files with hashed names, so browsers never re-request them. |
 | **Thunk** | A function returned by an action creator that gets `dispatch`, used for async work like API calls. The thunk middleware is built into Redux Toolkit's `configureStore`. |
-| **Redux Toolkit (RTK)** | The official way to write Redux. `configureStore` sets up thunk, DevTools and dev-time safety checks; `createSlice` (not used yet) generates reducers and actions. |
+| **Redux Toolkit (RTK)** | The official way to write Redux. `configureStore` sets up thunk, DevTools and dev-time safety checks; `createSlice` generates reducers and action creators (all store files use it since X4). |
 | **`useSelector` / `useDispatch`** | React-Redux hooks to read state and dispatch actions inside components. |
 | **`createRoot`** | React 18's way to mount an app (`react-dom/client`), replacing `ReactDOM.render`. |
 | **`useNavigate` / `<Navigate>`** | React Router v7's way to change pages from code / during render (replaced `useHistory` and `<Redirect>`). |

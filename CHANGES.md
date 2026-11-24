@@ -56,6 +56,12 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 3. **Sliding sessions (S5).** `GET /api/my` no longer renews the login cookie, so users are logged out `JWT_EXPIRES_IN` seconds after logging in, even if active. OK, or do you want it to renew (without putting the token in the body)?
 4. **Rate limit numbers (S9).** 10 requests/minute per IP for login and for signup. Good, or higher/lower?
 5. **Default avatar (S7).** A plain grey silhouette (`frontend/public/default-avatar.svg`). Want a different image? Set `DEFAULT_AVATAR_URL` or replace the file.
+6. **New look (S35).** The app now uses the "dusk" dark theme with a haze-rose accent (`#FF7AA2`), Fraunces and Hanken Grotesk fonts, and its own wordmark. Is that direction right? Everything is in `frontend/src/styles/tokens.css`, so colours and fonts are quick to change.
+7. **Navigation for logged-out visitors (S32).** Songs, Albums and Playlists links are now shown to everyone, since those pages are public. The home page no longer shows the logged-in user's email (S6). OK?
+8. **Artist page.** Artist names are plain text because no artist page exists. Do you want one (it needs a route and a list of the artist's albums and songs)?
+9. **Unique-title errors.** Creating an album or song with a title that already exists returns HTTP 500 ("title must be unique"). Do you want that to be a 409 with a friendly message?
+10. **sqlite3 6 and Docker (X3).** The prebuilt sqlite3 6 binary needs glibc 2.38 or newer. Fine on current macOS and Ubuntu 24.04, but the Docker base image in S39 must be new enough (or build from source). Is that acceptable, or should sqlite3 stay on 5?
+11. **Remaining audit findings (X3).** The backend still has 7 moderate findings (uuid via sequelize, glob/minimatch via sequelize-cli) that only clear with breaking upgrades. Leave them for now?
 
 ---
 
@@ -720,3 +726,10 @@ _The sign-up labels, `type="email"` and autocomplete attributes were already don
 - **Files:** `frontend/src/store/comments.js`, `store/index.js`, `components/Comments/*`, `components/Songs/DisplaySongInfo.jsx`, `backend/routes/api/songs.js`
 - **How to verify** (verified, jsdom + real backend): song 1 page shows "My Way", artist "Los Lonley Boys" and the album link; logged out there is one comment and no form; after the demo login: post (1 -> 2 comments, mine on top), edit ("Edited by tour"), delete (back to 1 + toast); `/songs/999999` shows "Song not found". API: two new comments on song 2 come back newest first.
 - **Things to watch:** the artist name is not a link because there is no artist page (see Batch 3 deviations). Comments are plain text (React escapes them), line breaks are kept.
+
+
+## Running Batch 3 locally
+- Run `npm install` in `backend/` and in `frontend/` (new packages: sharp, sqlite3 6, React 19, two @fontsource-variable fonts; removed: @faker-js/faker).
+- Run `npm run db:migrate` in `backend/` to add the indexes (S25). It removes duplicate playlist-song rows first.
+- sqlite3 6 needs glibc 2.38 or newer for its prebuilt binary; on older Linux run `npm rebuild sqlite3 --build-from-source`.
+- Uploaded images now come back as WebP; no config changes are needed.
