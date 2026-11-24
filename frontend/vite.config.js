@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
   // Only VITE_* variables are exposed to the browser code (import.meta.env.VITE_*).
   const env = loadEnv(mode, process.cwd(), '');
   // Where the dev server forwards /api requests. Default: the backend on port 5000.
-  const backendUrl = env.VITE_BACKEND_URL || 'http://localhost:5000';
+  const backendUrl = env.VITE_BACKEND_URL || 'http://localhost:8000';
 
   return {
     plugins: [react()],
