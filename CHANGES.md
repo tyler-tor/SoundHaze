@@ -576,3 +576,14 @@ _New item (not in the original plan), done first at Tyler's request._
 - **Files:** `backend/utils/staticFrontend.js`, `backend/routes/index.js`, `backend/awsS3.js`
 - **How to verify** (verified): a test Express app mounting `serveFrontend` on the real `frontend/dist`: `/` and `/songs/1` -> `no-cache`, `/assets/index-*.js` -> `max-age=31536000, immutable`, `/default-avatar.svg` -> `max-age=86400`; dev backend: `/api/songs/1`, `/api/albums`, `/api/csrf/restore` -> `no-store`, login still works. **Not verified:** the `CacheControl` field on a real S3 upload (no AWS credentials here) and `NODE_ENV=production` end to end (needs Postgres).
 - **Things to watch:** the plan also lists the deploy script (S44) and Terraform/CloudFront cache policies (S43); those items do not exist yet. When they are written, the S3 *frontend* bucket upload needs the same two rules (hashed assets immutable, `index.html` no-cache).
+
+## X3 — sqlite3 6, remove faker, npm audit fix (frontend)
+- **Problem:** `sqlite3` 5 pulled in an old build toolchain with many known vulnerabilities, `@faker-js/faker` was a dev dependency nothing used (the seeds are plain data), and the frontend had one moderate advisory.
+- **What changed:** backend: `sqlite3` ^5.1.7 -> ^6.0.1 (dev dependency, only used for the local SQLite DB); `@faker-js/faker` removed (no file imports it). Frontend: `npm audit fix` (non-breaking only; it updated `@babel/runtime`).
+- **npm audit counts** (before -> after):
+  - backend: 19 (2 low, 6 moderate, 10 high, 1 critical) -> **7 moderate**
+  - frontend: 1 (moderate) -> **0**
+  - Remaining in backend: `uuid` < 11.1.1 (needed by `sequelize` 6) and `glob`/`minimatch` (needed by `sequelize-cli`). Fixing them needs Sequelize 7 or a different CLI, i.e. a breaking change; not done. They are not reachable from user input here (the advisories concern calling `uuid` with a caller-supplied buffer, and glob patterns passed on the command line).
+- **Files:** `backend/package.json`, `backend/package-lock.json`, `frontend/package-lock.json`
+- **How to verify** (verified): `npm run db:reset` (undo all, migrate, seed) works, the server starts, login and API calls work, frontend builds. **Important:** the prebuilt `sqlite3` 6 binary needs glibc 2.38 or newer, which this sandbox (Ubuntu 22.04, glibc 2.35) does not have, so here the module was compiled from source (`npm rebuild sqlite3 --build-from-source`) to run these checks. On macOS, Windows and current Linux (Ubuntu 24.04+, Debian 13) `npm install` downloads a working binary.
+- **Things to watch:** the Docker image (S39) must not use Debian 12 / Ubuntu 22.04 as the base if it installs dev dependencies; production only needs `pg`, so installing with `--omit=dev` avoids sqlite3 entirely. If `npm install` ever fails on sqlite3, run `npm rebuild sqlite3 --build-from-source`.
