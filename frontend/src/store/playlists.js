@@ -1,35 +1,50 @@
+import { createSlice } from '@reduxjs/toolkit';
 import { csrfFetch } from "./csrf";
 
-const GET_PLAYLISTS = 'playlists/GET_PLAYLISTS';
-const CREATE_PLAYLIST = 'playlists/CREATE_PLAYLIST';
-const UPDATE_PLAYLIST = 'playlists/UPDATE_PLAYLIST';
-const DELETE_PLAYLIST = 'playlists/DELETE_PLAYLIST';
-const SHOW_PLAYLIST = 'playlists/SHOW_PLAYLIST';
-
-const getPlaylistsAction = (playlists) => ({
-    type: GET_PLAYLISTS,
-    payload: playlists
+// State shape (unchanged): { currentPlaylist: { [id]: playlist }, playlists: { [id]: playlist } }
+// Same idea as the albums slice: `playlists` is the list, `currentPlaylist`
+// holds playlists opened on their own page (with Songs and User).
+const playlistsSlice = createSlice({
+    name: 'playlists',
+    initialState: {
+        currentPlaylist: {},
+        playlists: {}
+    },
+    reducers: {
+        getPlaylistsAction: (state, action) => {
+            state.currentPlaylist = {};
+            state.playlists = {};
+            action.payload.forEach((playlist) => {
+                state.playlists[playlist.id] = playlist;
+            });
+        },
+        createPlaylistAction: (state, action) => {
+            state.playlists[action.payload.id] = action.payload;
+        },
+        updatePlaylistAction: (state, action) => {
+            const playlist = action.payload;
+            state.playlists[playlist.id] = playlist;
+            if (state.currentPlaylist[playlist.id]) {
+                state.currentPlaylist[playlist.id] = { ...state.currentPlaylist[playlist.id], ...playlist };
+            }
+        },
+        deletePlaylistAction: (state, action) => {
+            delete state.playlists[action.payload];
+            delete state.currentPlaylist[action.payload];
+        },
+        showPlaylistAction: (state, action) => {
+            state.currentPlaylist[action.payload.id] = action.payload;
+        }
+    }
 });
 
-const createPlaylistAction = (playlist) => ({
-    type: CREATE_PLAYLIST,
-    playlist
-});
-
-const updatePlaylistAction = (playlist) => ({
-    type: UPDATE_PLAYLIST,
-    playlist
-});
-
-const deletePlaylistAction = (playlistId) => ({
-    type: DELETE_PLAYLIST,
-    playlistId
-});
-
-const showPlaylistAction = (playlist) => ({
-    type: SHOW_PLAYLIST,
-    playlist
-});
+export const {
+    getPlaylistsAction,
+    createPlaylistAction,
+    updatePlaylistAction,
+    deletePlaylistAction,
+    showPlaylistAction
+} = playlistsSlice.actions;
 
 export const getPlaylists = () => async (dispatch) => {
     const res = await csrfFetch('/api/playlists');
@@ -90,55 +105,4 @@ export const showPlaylist = (playlistId) => async (dispatch) => {
     }
 };
 
-const initPlaylistData = {
-    currentPlaylist: {},
-    playlists: {}
-};
-
-const playlistReducer = (state = initPlaylistData, action) => {
-    let newState;
-    switch (action.type) {
-        case GET_PLAYLISTS:
-            newState = {
-                currentPlaylist: {},
-                playlists: {}
-            }
-            action.payload.forEach(playlist => {
-                newState.playlists[playlist.id] = playlist
-            })
-            return newState;
-        case CREATE_PLAYLIST:
-            newState = {
-                currentPlaylist: null,
-                playlists: {...state.playlists}
-            };
-            newState.playlists[action.playlist.id] = action.playlist;
-            return newState;
-        case UPDATE_PLAYLIST:
-            newState = {
-                currentPlaylist: {...state.currentPlaylist},
-                playlists: {...state.playlists}
-            };
-            newState.currentPlaylist = {...action.playlist};
-            newState.playlists[action.playlist.id] = action.playlist;
-            return newState;
-        case DELETE_PLAYLIST:
-            newState = {
-                currentPlaylist: {...state.currentPlaylist},
-                playlists: {...state.playlists}
-            };
-            delete newState.playlists[action.playlistId];
-            return newState;
-        case SHOW_PLAYLIST:
-            newState = {
-                currentPlaylist: {...state.currentPlaylist},
-                playlists: {...state.playlists}
-            };
-            newState.currentPlaylist[action.playlist.id] = action.playlist;
-            return newState;
-        default:
-            return state;
-    }
-}
-
-export default playlistReducer;
+export default playlistsSlice.reducer;

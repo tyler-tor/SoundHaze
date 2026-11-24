@@ -1,40 +1,40 @@
+import { createSlice } from '@reduxjs/toolkit';
 import { csrfFetch, restoreCSRF } from "./csrf";
 
-const SET_SESSION_USER = 'session/SET_SESSION_USER';
-const REMOVE_SESSION_USER = 'session/REMOVE_SESSION_USER';
-const SIGNUP_NEW_USER = 'session/SIGNUP_NEW_USER';
-const GET_MY_PLAYLISTS = 'session/GET_MY_PLAYLISTS';
-const GET_MY_ALBUMS = 'session/GET_MY_ALBUMS';
-const GET_MY_SONGS = 'session/GET_MY_SONGS';
+// State shape (unchanged): the logged-in user plus *their own* content, kept
+// as arrays (not id maps): { user, playlists: [], songs: [], albums: [] }.
+const initialState = {
+    user: null,
+    playlists: [],
+    songs: [],
+    albums: []
+};
 
-const setSessionUser = (user) => ({
-    type: SET_SESSION_USER,
-    payload: user
+const sessionSlice = createSlice({
+    name: 'session',
+    initialState,
+    reducers: {
+        setSessionUser: (state, action) => {
+            state.user = action.payload;
+        },
+        signUpNewUser: (state, action) => {
+            state.user = action.payload;
+        },
+        removeSessionUser: () => initialState,
+        getMyPlaylists: (state, action) => {
+            state.playlists = action.payload;
+        },
+        getMyAlbums: (state, action) => {
+            state.albums = action.payload;
+        },
+        getMySongs: (state, action) => {
+            state.songs = action.payload;
+        }
+    }
 });
 
-const removeSessionUser = () => ({
-    type: REMOVE_SESSION_USER
-});
-
-const signUpNewUser = (user) => ({
-    type: SIGNUP_NEW_USER,
-    payload: user
-});
-
-const getMyPlaylists = (playlists) => ({
-    type: GET_MY_PLAYLISTS,
-    payload: playlists
-});
-
-const getMyAlbums = (albums) => ({
-    type: GET_MY_ALBUMS,
-    payload: albums
-});
-
-const getMySongs = (songs) => ({
-    type: GET_MY_SONGS,
-    payload: songs
-});
+const { setSessionUser, signUpNewUser, removeSessionUser, getMyPlaylists, getMyAlbums, getMySongs } =
+    sessionSlice.actions;
 
 export const loginUser = (user) => async (dispatch) => {
     const res = await csrfFetch('/api/session/login', {
@@ -141,46 +141,4 @@ export const logoutUser = () => async (dispatch) => {
     };
 };
 
-const initUserData = {
-    user: null,
-    playlists: [],
-    songs: [],
-    albums: []
-};
-
-const sessionReducer = (state = initUserData, action) => {
-    let newState;
-    switch (action.type) {
-        case (SIGNUP_NEW_USER):
-            newState = Object.assign({}, state);
-            newState.user = action.payload;
-            return newState;
-        case (SET_SESSION_USER):
-            newState = Object.assign({}, state);
-            newState.user = action.payload;
-            return newState;
-        case (REMOVE_SESSION_USER):
-            newState = Object.assign({}, state);
-            newState.user = null;
-            newState.playlists = [];
-            newState.songs = [];
-            newState.albums = [];
-            return newState;
-        case (GET_MY_PLAYLISTS):
-            newState = Object.assign({}, state);
-            newState.playlists = action.payload;
-            return newState;
-        case(GET_MY_ALBUMS):
-            newState = Object.assign({}, state);
-            newState.albums = action.payload;
-            return newState;
-        case(GET_MY_SONGS):
-            newState = Object.assign({}, state);
-            newState.songs = action.payload;
-            return newState;
-        default:
-            return state;
-    }
-};
-
-export default sessionReducer;
+export default sessionSlice.reducer;

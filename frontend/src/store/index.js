@@ -9,6 +9,9 @@
 //   - in development it also checks that reducers never mutate state and
 //     that state/actions are serializable, and warns in the console if not.
 // redux-logger is gone: use the Redux DevTools extension instead.
+//
+// Every store/*.js file is a createSlice slice (X4). Each file exports its
+// reducer as the default export and its thunks / action creators by name.
 import { configureStore as configureRtkStore } from '@reduxjs/toolkit';
 import sessionReducer from './session';
 import songsReducer from './songs';

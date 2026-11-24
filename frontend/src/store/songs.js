@@ -1,33 +1,43 @@
+import { createSlice } from '@reduxjs/toolkit';
 import { csrfFetch } from "./csrf";
 
-const GET_SONGS = 'songs/GET_SONGS';
-const CREATE_SONG = 'songs/CREATE_SONG';
-const UPDATE_SONG = 'songs/UPDATE_SONG';
-const REMOVE_SONG = 'songs/REMOVE_SONG';
-const SHOW_SONG = 'songs/SHOW_SONG';
-
-const getSongsAction = (songs) => ({
-    type: GET_SONGS,
-    payload: songs
+// State shape (unchanged since the plain-Redux version): { [songId]: song }.
+// createSlice (X4) lets the reducers "mutate" a draft copy; Immer turns that
+// into a new immutable state, so there is no manual spreading.
+const songsSlice = createSlice({
+    name: 'songs',
+    initialState: {},
+    reducers: {
+        // Replaces everything with the given list.
+        getSongsAction: (_state, action) => {
+            const byId = {};
+            action.payload.forEach((song) => {
+                byId[song.id] = song;
+            });
+            return byId;
+        },
+        createSongAction: (state, action) => {
+            state[action.payload.id] = action.payload;
+        },
+        updateSongAction: (state, action) => {
+            state[action.payload.id] = action.payload;
+        },
+        removeSongAction: (state, action) => {
+            delete state[action.payload];
+        },
+        showSongAction: (state, action) => {
+            state[action.payload.id] = action.payload;
+        }
+    }
 });
 
-const createSongAction = (song) => ({
-    type: CREATE_SONG,
-    song
-});
-
-const updateSongAction = (song) => ({
-    type: UPDATE_SONG,
-    song
-});
-const removeSongAction = (id) => ({
-    type: REMOVE_SONG,
-    id
-});
-const showSongAction = (song) => ({
-    type: SHOW_SONG,
-    song
-})
+export const {
+    getSongsAction,
+    createSongAction,
+    updateSongAction,
+    removeSongAction,
+    showSongAction
+} = songsSlice.actions;
 
 // GET /api/songs is paginated (max 100 per page). The UI still expects the
 // full list, so fetch page after page until we have them all.
@@ -108,38 +118,4 @@ export const showSong = (songId) => async (dispatch) => {
     }
 }
 
-const initSongData = {};
-
-const songsReducer = (state = initSongData, action) => {
-    let newState;
-    switch (action.type) {
-        case (GET_SONGS):
-            newState = {}
-            action.payload.forEach((song) => {
-                newState[song.id] = song;
-            })
-            return newState
-        case (CREATE_SONG): {
-            return {
-                ...state,
-                [action.song.id]: action.song
-            }
-        }
-        case (UPDATE_SONG):
-            newState = { ...state };
-            newState[action.song.id] = action.song
-            return newState;
-        case (REMOVE_SONG):
-            newState = { ...state };
-            delete newState[action.id];
-            return newState;
-        case (SHOW_SONG):
-            newState = { ...state };
-            newState[action.song.id] = action.song;
-            return newState
-        default:
-            return state;
-    }
-};
-
-export default songsReducer;
+export default songsSlice.reducer;
