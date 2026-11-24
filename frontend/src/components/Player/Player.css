@@ -64,7 +64,8 @@ a.now-playing-title:hover { color: var(--accent); text-decoration: none; }
 .media-player .rhap_volume-container:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 /* Nothing selected yet: show the controls but dimmed. */
-.media-player .is-idle { opacity: 0.45; pointer-events: none; }
+.media-player .is-idle { opacity: 0.45; }
+.player-controls { min-width: 0; }
 
 /* ---- Phones: now playing on top, controls and progress underneath ---- */
 @media (max-width: 720px) {

@@ -693,6 +693,7 @@ _The sign-up labels, `type="email"` and autocomplete attributes were already don
   - Contrast check (computed from the token values): text on page/card/raised surface 16.8 / 15.2 / 13.5:1; secondary text 8.6 / 7.7 / 6.9:1; accent on page 7.7:1; dark text on the accent 7.7:1; danger text 9.3:1; input border on card 3.06:1 (WCAG 1.4.11 asks for 3:1).
 - **Files:** `components/common/PlayButton.jsx`, `Songs/*`, `Albums/*`, `Playlists/*`, `UpdateSong/UpdateSongModal.jsx`, `UpdateAlbum/UpdateAlbumModal.jsx`, `CreateSong/*`, `LoginFormModal/LoginForm.jsx`, `styles/base.css`, `styles/pages.css`
 - **How to verify** (verified in jsdom): an audit script visited `/`, `/songs`, `/albums`, `/playlists`, `/albums/1`, `/playlists/1`, `/songs/1` and found 0 images without `alt`, 0 icon-only buttons without a name, 0 inputs without a label, 0 clickable SVGs, exactly one `<h1>` per page and a distinct page title for each; 98 real play buttons on `/songs`. All earlier tours still pass. **Not tested:** with a screen reader or axe/Lighthouse (no browser). Please run Lighthouse's accessibility audit on a few pages.
+- **Follow-up in a later commit:** before a song is chosen the player's controls are dimmed and `inert`, so keyboard users do not tab into controls that do nothing (`Player.jsx`, `Player.css`).
 - **Things to watch:** the player's own controls come from `react-h5-audio-player`, which provides its own aria-labels ("Play", "Previous", "Skip", "Mute", progress slider).
 
 ## S33 — Loading, empty and error states, toasts, prominent demo login

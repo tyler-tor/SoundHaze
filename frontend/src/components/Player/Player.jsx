@@ -29,8 +29,9 @@ function Player() {
             <p className='now-playing-empty'>Pick a song to start listening.</p>
           )}
         </div>
+        {/* No song yet: dimmed and `inert`, so keyboard users do not tab into dead controls. */}
+        <div className={song ? 'player-controls' : 'player-controls is-idle'} inert={!song}>
         <AudioPlayer
-          className={song ? '' : 'is-idle'}
           src={song?.url}
           volume={0.5}
           preload='metadata'
@@ -44,6 +45,7 @@ function Player() {
           onClickPrevious={() => dispatch(playPrevious())}
           onEnded={() => dispatch(playNext())}
         />
+        </div>
       </div>
     </section>
   )
