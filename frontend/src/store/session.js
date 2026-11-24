@@ -1,5 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { csrfFetch, restoreCSRF } from "./csrf";
+import { createAlbumAction, updateAlbumAction, removeAlbumAction } from './albums';
+import { createPlaylistAction, updatePlaylistAction, deletePlaylistAction } from './playlists';
+import { createSongAction, updateSongAction, removeSongAction } from './songs';
 
 // State shape (unchanged): the logged-in user plus *their own* content, kept
 // as arrays (not id maps): { user, playlists: [], songs: [], albums: [] }.
@@ -8,6 +11,13 @@ const initialState = {
     playlists: [],
     songs: [],
     albums: []
+};
+
+// Replace the item with the same id, or add it to the end of the list.
+const upsert = (list, item) => {
+    const i = list.findIndex((x) => x.id === item.id);
+    if (i === -1) list.push(item);
+    else list[i] = item;
 };
 
 const sessionSlice = createSlice({
@@ -30,6 +40,31 @@ const sessionSlice = createSlice({
         getMySongs: (state, action) => {
             state.songs = action.payload;
         }
+    },
+    // X1: the Home page and the dropdowns (album picker in Create Song,
+    // playlist picker in "+ to Playlist") read these per-user lists. They are
+    // fetched once after login, so without the cases below a new album or
+    // playlist did not show up until a page reload. Whenever another slice
+    // creates, updates or deletes one of the user's own items, mirror it here.
+    extraReducers: (builder) => {
+        builder
+            .addCase(createAlbumAction, (state, action) => upsert(state.albums, action.payload))
+            .addCase(updateAlbumAction, (state, action) => upsert(state.albums, action.payload))
+            .addCase(removeAlbumAction, (state, action) => {
+                state.albums = state.albums.filter((a) => a.id !== action.payload);
+                // Deleting an album deletes its songs on the server.
+                state.songs = state.songs.filter((s) => s.albumId !== action.payload);
+            })
+            .addCase(createPlaylistAction, (state, action) => upsert(state.playlists, action.payload))
+            .addCase(updatePlaylistAction, (state, action) => upsert(state.playlists, action.payload))
+            .addCase(deletePlaylistAction, (state, action) => {
+                state.playlists = state.playlists.filter((p) => p.id !== action.payload);
+            })
+            .addCase(createSongAction, (state, action) => upsert(state.songs, action.payload))
+            .addCase(updateSongAction, (state, action) => upsert(state.songs, action.payload))
+            .addCase(removeSongAction, (state, action) => {
+                state.songs = state.songs.filter((s) => s.id !== Number(action.payload));
+            });
     }
 });
 

@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import { csrfFetch } from "./csrf";
+import { removeAlbumAction } from './albums';
 
 // State shape (unchanged since the plain-Redux version): { [songId]: song }.
 // createSlice (X4) lets the reducers "mutate" a draft copy; Immer turns that
@@ -28,6 +29,15 @@ const songsSlice = createSlice({
         showSongAction: (state, action) => {
             state[action.payload.id] = action.payload;
         }
+    },
+    // Deleting an album deletes its songs on the server (X1): drop them here
+    // too instead of waiting for a re-fetch.
+    extraReducers: (builder) => {
+        builder.addCase(removeAlbumAction, (state, action) => {
+            Object.keys(state).forEach((id) => {
+                if (state[id].albumId === action.payload) delete state[id];
+            });
+        });
     }
 });
 
