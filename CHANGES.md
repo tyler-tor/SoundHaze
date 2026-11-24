@@ -42,6 +42,7 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 ### Batch 3 deviations
 
 - **S25 (plan said "depends on S37"):** S37 (Postgres-safe seeds) is not in this batch. The migration dedupes join rows itself, so it does not need it.
+- **S26 (/api/my/library):** the plan marks the combined library endpoint as optional. Not done: it would change three store thunks and the Home page for a small saving on three small requests.
 
 ## Open questions for Tyler
 
@@ -532,3 +533,13 @@ _New item (not in the original plan), done first at Tyler's request._
 - **Files:** `backend/db/migrations/20261124000000-add-indexes.js`, `backend/db/models/playlistsong.js`, `backend/routes/api/playlist.js`
 - **How to verify** (verified): inserted 2 duplicate join rows in the SQLite dev DB (151 -> 153 rows), ran `npm run db:migrate` (back to 151 rows, 7 indexes present); a further duplicate insert fails with `UNIQUE constraint failed`; `db:migrate:undo` removes all 7 indexes and re-running migrate restores them. API: adding song 99 to a playlist twice returns 200 then 409. Not run against Postgres (not available here); the SQL is plain and quotes the schema name.
 - **Things to watch:** on Postgres, `CREATE INDEX` locks writes to the table briefly; these tables are tiny. Run `db:migrate` as usual on deploy.
+
+## S26 — Remove wasted queries
+- **Problem:** the song page downloaded every song to show one; `GET /api/songs/:id` and `GET /api/albums/:id` ran a second query for the artist; `GET /api/artists/:id` ran two counts one after the other.
+- **What changed:**
+  - `DisplaySongInfo` calls `showSong(songId)` (one request) and re-fetches when the URL changes.
+  - Song and album detail now load the artist with `include` (one query). The JSON is byte-for-byte the same as before (`Artist` key kept; checked by diffing old and new responses for song 1, album 1, artist 2).
+  - Artist detail runs its two counts with `Promise.all`.
+- **Files:** `frontend/src/components/Songs/DisplaySongInfo.jsx`, `backend/routes/api/songs.js`, `album.js`, `artist.js`
+- **How to verify** (verified): response bodies of `/api/songs/1`, `/api/albums/1`, `/api/artists/2` were saved before and after and are identical; a missing song still returns 404; `npm run build` passes.
+- **Things to watch:** the optional "combine playlists/albums/songs into one `/api/my/library`" idea was **not** done (see Batch 3 deviations).

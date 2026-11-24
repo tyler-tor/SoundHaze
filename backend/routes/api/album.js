@@ -102,16 +102,19 @@ router.get('/:albumId', async(req, res, next) => {
     const { albumId } = req.params;
 
 
+    // One query for the album, its songs and its artist (S26).
     const album = await Album.findByPk(albumId, {
         include: [
-            { model: Song }
+            { model: Song },
+            { model: User.scope('includedArtist') }
         ]
     });
 
     if(album){
-        const artist = await User.scope('includedArtist').findByPk(album.userId);
-        album.dataValues.Artist = artist
-        return res.json(album)
+        const json = album.toJSON();
+        json.Artist = json.User;
+        delete json.User;
+        return res.json(json)
     }else{
         albumCouldNotBeFound(next)
     }

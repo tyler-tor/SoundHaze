@@ -66,16 +66,13 @@ router.get('/:artistId', async(req, res, next) => {
     const Artist = await User.scope('includedArtist').findByPk(artistId);
 
     if(Artist){
-        Artist.dataValues.totalSongs = await Song.count({
-            where: {
-                userId: Artist.id
-            }
-        });
-        Artist.dataValues.totalAlbums = await Album.count({
-            where: {
-                userId: Artist.id
-            }
-        });
+        // The two counts do not depend on each other: run them together (S26).
+        const [totalSongs, totalAlbums] = await Promise.all([
+            Song.count({ where: { userId: Artist.id } }),
+            Album.count({ where: { userId: Artist.id } })
+        ]);
+        Artist.dataValues.totalSongs = totalSongs;
+        Artist.dataValues.totalAlbums = totalAlbums;
 
         return res.json(Artist)
     }else{

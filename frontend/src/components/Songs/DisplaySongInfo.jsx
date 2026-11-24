@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { getSongs } from '../../store/songs';
+import { showSong } from '../../store/songs';
 import './displaysong.css'
 
 const DisplaySongInfo = () => {
@@ -10,8 +10,9 @@ const DisplaySongInfo = () => {
     const dispatch = useDispatch();
 
     useEffect(() => {
-        dispatch(getSongs());
-    }, [dispatch]);
+        // One song, not the whole catalogue (S26). A 404 leaves the page empty.
+        dispatch(showSong(songId)).catch(() => {});
+    }, [dispatch, songId]);
 
     return (
         <>

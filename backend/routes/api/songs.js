@@ -143,21 +143,23 @@ router.put('/:songId', requireAuth, requireOwner(Song, 'songId'), validateSongUp
 router.get('/:songId', async (req, res, next) => {
     const { songId } = req.params;
 
-
+    // One query: the song, its album and its artist (S26; before, the artist
+    // was a second query).
     const song = await Song.findByPk(songId, {
         include: [
-            { model: Album.scope('includedAlbum') }
+            { model: Album.scope('includedAlbum') },
+            { model: User.scope('includedArtist') }
         ]
     });
     if (song) {
-        const artist = await User.scope('includedArtist').findByPk(song.userId);
-        song.dataValues.Artist = artist
-        return res.json(song)
+        // The response keeps the same shape as before: the artist is `Artist`.
+        const json = song.toJSON();
+        json.Artist = json.User;
+        delete json.User;
+        return res.json(json)
     } else {
         songCouldNotBeFound(next);
     }
-
-
 });
 
 router.delete('/:songId', requireAuth, async(req, res, next) => {
