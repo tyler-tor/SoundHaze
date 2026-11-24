@@ -1,4 +1,4 @@
-# SoundCloud-API-Project
+# SoundHaze
 SoundCloud API Project AppAcademy
 
 A website to view songs and albums made by other users for every user.

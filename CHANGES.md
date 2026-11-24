@@ -740,3 +740,7 @@ _The sign-up labels, `type="email"` and autocomplete attributes were already don
 - **Files:** `frontend/src/components/Player/Player.jsx`
 - **How to verify:** `npm run dev` in `frontend/`, open http://localhost:3000: the bottom bar shows controls in one row with the time on each side of the progress bar.
 - **Things to watch:** none.
+
+## Brand — README title is "SoundHaze"
+- **What changed:** the README title was the old repo name ("SoundCloud-API-Project"); it is now **SoundHaze**, matching the app. Everything users see in the app already said SoundHaze.
+- **Files:** `README.md`
