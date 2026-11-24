@@ -10,7 +10,7 @@ const LoginFormModal = ({ className = 'btn btn-ghost', children = 'Log in' }) =>
       <button type='button' onClick={() => setShowModal(true)} className={className}>{children}</button>
       {showModal && (
         <Modal onClose={() => setShowModal(false)} title="Log in">
-          <LoginForm />
+          <LoginForm onNavigate={() => setShowModal(false)} />
         </Modal>
       )}
     </>

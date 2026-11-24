@@ -1,6 +1,6 @@
 import { useSelector, useDispatch } from "react-redux";
 import { NavLink } from "react-router-dom";
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { getSongs } from "../../store/songs";
 import { getAlbums } from "../../store/albums";
 import { playSong } from "../../store/player";
@@ -8,7 +8,9 @@ import DeleteSong from "./DeleteSong";
 import CreateSongModal from "../CreateSong/CreateSongModal";
 import UpdateSongModal from "../UpdateSong/UpdateSongModal";
 import AddSongModal from '../Playlists/AddSongModal';
-import { Cover, PlayButton, usePageTitle } from "../common";
+import CreateAlbumModal from "../CreateAlbum/CreateAlbumModal";
+import DemoUser from "../DemoUser/DemoUser";
+import { Cover, PlayButton, usePageTitle, useLoad, SkeletonGrid, EmptyState, ErrorState } from "../common";
 import '../../styles/pages.css';
 
 const Songs = () => {
@@ -17,10 +19,10 @@ const Songs = () => {
     const dispatch = useDispatch();
     usePageTitle('Songs');
 
-    useEffect(() => {
-        dispatch(getSongs());
-        dispatch(getAlbums());
-    }, [dispatch]);
+    const { status, reload } = useLoad(
+        () => Promise.all([dispatch(getSongs()), dispatch(getAlbums())]),
+        [dispatch]
+    );
 
     const playSongBtn = useCallback(
         (song, list) => {
@@ -38,6 +40,20 @@ const Songs = () => {
                 </div>
                 {user && <CreateSongModal />}
             </div>
+            {songs.length === 0 && status === 'loading' && <SkeletonGrid label="Loading songs" />}
+            {songs.length === 0 && status === 'error' && (
+                <ErrorState title="Couldn't load songs" onRetry={reload} />
+            )}
+            {songs.length === 0 && status === 'ready' && (
+                <EmptyState
+                    title="No songs yet"
+                    action={user ? <CreateAlbumModal /> : <DemoUser className="btn btn-primary">Try the demo</DemoUser>}
+                >
+                    {user
+                        ? 'Songs live inside albums. Create an album first, then upload your first song to it.'
+                        : 'Be the first to upload. Log in, or try the demo to look around.'}
+                </EmptyState>
+            )}
             <div className="grid">
                 {songs.map(song => (
                     <article className="tile" key={song.id}>

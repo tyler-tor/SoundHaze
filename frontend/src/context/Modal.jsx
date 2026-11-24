@@ -47,7 +47,7 @@ export const Modal = ({ onClose, title, children }) => {
         const panel = panelRef.current;
 
         // Make the rest of the page inert while the dialog is open.
-        const siblings = [...modalNode.parentElement.children].filter((el) => el !== modalNode);
+        const siblings = [...modalNode.parentElement.children].filter((el) => el !== modalNode && !el.hasAttribute('data-persist'));
         siblings.forEach((el) => el.setAttribute('inert', ''));
         const previousOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';

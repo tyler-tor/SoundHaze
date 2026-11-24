@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useToast } from '../common';
 import { Modal } from '../../context/Modal';
 import UpdateSong from './UpdateSong';
 
 const UpdateSongModal = ({song, userId}) => {
+    const toast = useToast();
     const [showModal, setShowModal] = useState(false);
 
     const handleClick = (e) => {
@@ -10,7 +12,7 @@ const UpdateSongModal = ({song, userId}) => {
         if (song.userId === userId) {
             setShowModal(true)
         } else {
-            window.alert('You do not have access to update this song')
+            toast.error('You can only edit your own songs.')
         }
     };
 

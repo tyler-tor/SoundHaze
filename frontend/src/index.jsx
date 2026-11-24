@@ -8,6 +8,7 @@ import { restoreCSRF, csrfFetch } from './store/csrf';
 import * as sessionActions from './store/session';
 import configureStore from './store';
 import { ModalProvider } from './context/Modal'
+import { ToastProvider } from './components/common';
 
 
 const store = configureStore();
@@ -26,11 +27,13 @@ if (import.meta.env.DEV) {
 function Root() {
   return (
     <Provider store={store}>
-      <ModalProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </ModalProvider>
+      <ToastProvider>
+        <ModalProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ModalProvider>
+      </ToastProvider>
     </Provider>
   )
 }

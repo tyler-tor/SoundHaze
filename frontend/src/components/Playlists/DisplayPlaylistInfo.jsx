@@ -1,12 +1,13 @@
 import { Link, useParams } from "react-router-dom";
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { showPlaylist } from "../../store/playlists";
 import { playSong } from "../../store/player";
 import UpdatePlaylistModal from "./UpdatePlaylistModal";
 import DeletePlaylist from "./DeletePlaylist";
 import DeletePlaylistSongModal from "./DeletePlaylistSongModal";
-import { Cover, PlayButton, usePageTitle } from "../common";
+import PageNotFound from "../PageNotFound";
+import { Cover, PlayButton, usePageTitle, useLoad, SkeletonDetail, ErrorState, EmptyState } from "../common";
 import '../../styles/pages.css';
 
 const DisplayPlaylistInfo = () => {
@@ -16,9 +17,7 @@ const DisplayPlaylistInfo = () => {
     const dispatch = useDispatch();
     usePageTitle(playlist?.name);
 
-    useEffect(() => {
-        dispatch(showPlaylist(playlistId));
-    }, [dispatch, playlistId]);
+    const { status, notFound, reload } = useLoad(() => dispatch(showPlaylist(playlistId)), [dispatch, playlistId]);
 
     const playSongBtn = useCallback(
         (song) => {
@@ -27,7 +26,14 @@ const DisplayPlaylistInfo = () => {
         [dispatch, playlist]
     );
 
-    if (!playlist) return null;
+    if (notFound) {
+        return <PageNotFound title="Playlist not found" message="This playlist doesn't exist, or it was deleted." />;
+    }
+    if (!playlist) {
+        return status === 'error'
+            ? <div className="page"><ErrorState title="Couldn't load this playlist" onRetry={reload} /></div>
+            : <SkeletonDetail label="Loading playlist" />;
+    }
 
     return (
         <div className="page">
@@ -71,7 +77,11 @@ const DisplayPlaylistInfo = () => {
                         </li>
                     ))}
                 </ul>
-                {playlist.Songs.length === 0 && <p className="muted">No songs in this playlist yet. Use "Add to playlist" on any song.</p>}
+                {playlist.Songs.length === 0 && (
+                    <EmptyState title="No songs in this playlist yet">
+                        Open any song and choose "Add to playlist".
+                    </EmptyState>
+                )}
             </section>
         </div>
     )

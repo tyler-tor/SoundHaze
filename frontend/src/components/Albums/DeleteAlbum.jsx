@@ -1,3 +1,4 @@
+import { useToast } from "../common";
 import { useDispatch } from "react-redux";
 import { removeAlbum } from "../../store/albums";
 import { useNavigate } from "react-router-dom";
@@ -7,6 +8,7 @@ import { getErrorMessages } from "../../store/csrf";
 const DeleteAlbum = ({album, userId}) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const toast = useToast();
 
     const handleClick = async (e) => {
         if(album.userId === userId){
@@ -17,12 +19,12 @@ const DeleteAlbum = ({album, userId}) => {
                 // Deleting an album also deletes its songs, so refresh them.
                 await dispatch(getSongs());
                 navigate('/albums');
-                window.alert('Successfully deleted! Now create another!');
+                toast.success(`Deleted "${album.title}".`);
             } catch (response) {
-                window.alert((await getErrorMessages(response)).join('\n'));
+                toast.error((await getErrorMessages(response)).join(' '));
             }
         }else {
-            window.alert('You do not have access to delete/modify this album')
+            toast.error('You can only delete your own albums.')
         }
     };
 

@@ -7,7 +7,7 @@ import { Link, NavLink } from "react-router-dom";
 import { useEffect } from "react";
 import { mySongs } from "../../store/session";
 import { getAlbums } from "../../store/albums";
-import { Cover, usePageTitle } from "../common";
+import { Cover, usePageTitle, useLoad, SkeletonGrid, EmptyState, ErrorState } from "../common";
 import './homepage.css'
 
 // A row of cards: one per album / playlist / song.
@@ -86,9 +86,7 @@ const Dashboard = ({ currentUser }) => {
     const dispatch = useDispatch();
     usePageTitle('Home');
 
-    useEffect(() => {
-        dispatch(mySongs());
-    }, [dispatch]);
+    const { status, reload } = useLoad(() => dispatch(mySongs()), [dispatch]);
 
     return (
         <div className="page">
@@ -111,19 +109,35 @@ const Dashboard = ({ currentUser }) => {
             <section className="section" aria-labelledby="home-albums">
                 <div className="section-head"><h2 id="home-albums">Your albums</h2></div>
                 <TileGrid items={albums} getTo={(a) => `/albums/${a.id}`} getTitle={(a) => a.title} getImage={(a) => a.previewImage} />
-                {albums.length === 0 && <p className="muted">No albums yet.</p>}
+                {albums.length === 0 && (
+                    <EmptyState title="You haven't made an album yet" action={<CreateAlbumModal />}>
+                        Albums hold your songs. Create one with a cover image to get started.
+                    </EmptyState>
+                )}
             </section>
 
             <section className="section" aria-labelledby="home-playlists">
                 <div className="section-head"><h2 id="home-playlists">Your playlists</h2></div>
                 <TileGrid items={playlists} getTo={(p) => `/playlists/${p.id}`} getTitle={(p) => p.name} getImage={(p) => p.previewImage} />
-                {playlists.length === 0 && <p className="muted">No playlists yet.</p>}
+                {playlists.length === 0 && (
+                    <EmptyState title="No playlists yet" action={<CreatePlaylistModal />}>
+                        Playlists collect songs from any album, yours or anyone else's.
+                    </EmptyState>
+                )}
             </section>
 
             <section className="section" aria-labelledby="home-songs">
                 <div className="section-head"><h2 id="home-songs">Your songs</h2></div>
                 <TileGrid items={songs} getTo={(s) => `/songs/${s.id}`} getTitle={(s) => s.title} getImage={(s) => s.previewImage} />
-                {songs.length === 0 && <p className="muted">No songs yet.</p>}
+                {songs.length === 0 && status === 'loading' && <SkeletonGrid count={4} label="Loading your songs" />}
+                {songs.length === 0 && status === 'error' && <ErrorState title="Couldn't load your songs" onRetry={reload} />}
+                {songs.length === 0 && status === 'ready' && (
+                    <EmptyState title="No songs yet">
+                        {albums.length === 0
+                            ? 'Create an album first, then upload songs to it.'
+                            : 'Open one of your albums and choose "Create Song".'}
+                    </EmptyState>
+                )}
             </section>
         </div>
     );

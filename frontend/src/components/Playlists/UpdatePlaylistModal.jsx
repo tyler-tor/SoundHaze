@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useToast } from '../common';
 import { Modal } from '../../context/Modal';
 import UpdatePlaylist from './UpdatePlaylist';
 
 function UpdatePlaylistModal({ playlist, userId }) {
+    const toast = useToast();
     const [showModal, setShowModal] = useState(false);
 
     const handleClick = (e) => {
@@ -10,7 +12,7 @@ function UpdatePlaylistModal({ playlist, userId }) {
         if (playlist.userId === userId) {
             setShowModal(true);
         } else {
-            window.alert('You are not the owner of this playlist');
+            toast.error('You can only edit your own playlists.');
         }
     };
 

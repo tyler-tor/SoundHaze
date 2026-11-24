@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import * as sessionActions from "../../store/session";
 import { useDispatch } from "react-redux";
+import { Link } from "react-router-dom";
+import DemoUser from "../DemoUser/DemoUser";
 import { getErrorMessages } from "../../store/csrf";
 
 
-function LoginForm() {
+function LoginForm({ onNavigate }) {
     const dispatch = useDispatch();
     const [credential, setCredential] = useState("");
     const [password, setPassword] = useState("");
@@ -48,7 +50,13 @@ function LoginForm() {
             required
           />
         </label>
-        <button type="submit" className="btn btn-primary">Log In</button>
+        <button type="submit" className="btn btn-primary">Log in</button>
+        <div className="auth-alt">
+          <p className="muted">
+            New here? <Link to="/signup" onClick={onNavigate}>Create an account</Link>
+          </p>
+          <DemoUser className="btn btn-secondary btn-sm">Or try the demo</DemoUser>
+        </div>
       </form>
     );
   }

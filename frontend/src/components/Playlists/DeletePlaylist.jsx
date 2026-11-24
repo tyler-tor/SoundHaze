@@ -1,4 +1,5 @@
 import React from 'react';
+import { useToast } from "../common";
 import { useDispatch } from 'react-redux';
 import { deletePlaylist } from '../../store/playlists';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +8,7 @@ import { getErrorMessages } from '../../store/csrf';
 function DeletePlaylist({ playlist, userId }) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const toast = useToast();
 
     const handleClick = async (e) => {
         if(playlist.userId === userId){
@@ -15,12 +17,12 @@ function DeletePlaylist({ playlist, userId }) {
                 // currentPlaylist, which is empty on the /playlists list page.
                 await dispatch(deletePlaylist(playlist.id));
                 navigate('/playlists');
-                window.alert('Successfully deleted! Now create another!');
+                toast.success(`Deleted "${playlist.name}".`);
             } catch (response) {
-                window.alert((await getErrorMessages(response)).join('\n'));
+                toast.error((await getErrorMessages(response)).join(' '));
             }
         }else {
-            window.alert('You are not authorized to delete this playlist!');
+            toast.error('You can only delete your own playlists.');
         }
     }
     return (

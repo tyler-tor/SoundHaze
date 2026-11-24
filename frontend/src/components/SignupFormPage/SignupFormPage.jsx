@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom';
 import { signUpUser } from '../../store/session';
 import { getErrorMessages } from '../../store/csrf';
 import { usePageTitle } from '../common';
+import DemoUser from '../DemoUser/DemoUser';
 // import ImageComponent from '../ImageComponent';
 
 const SignupFormPage = () => {
@@ -149,6 +150,10 @@ const SignupFormPage = () => {
                         disabled={validationErrors.length > 0}
                     >Sign up</button>
                 </form>
+                <div className='auth-alt'>
+                    <p className='muted'>Just looking around?</p>
+                    <DemoUser className='btn btn-secondary'>Try the demo instead</DemoUser>
+                </div>
             </section>
         </div>
     )

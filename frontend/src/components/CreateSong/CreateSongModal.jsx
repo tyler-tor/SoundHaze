@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useToast } from '../common';
 import { Modal } from '../../context/Modal';
 import CreateSong from './CreateSong';
 
 const CreateSongModal = ({album, userId, className = 'btn btn-primary'}) => {
+    const toast = useToast();
     const [showModal, setShowModal] = useState(false);
 
     const handleClick = (e) => {
@@ -10,7 +12,7 @@ const CreateSongModal = ({album, userId, className = 'btn btn-primary'}) => {
         // Only the owner of an album may add songs to it. Say so and stop;
         // the modal must not open after the alert.
         if (album && album.userId !== userId) {
-            window.alert('You do not have access to add a song');
+            toast.error('You can only add songs to your own albums.');
             return;
         }
         setShowModal(true);

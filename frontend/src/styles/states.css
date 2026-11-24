@@ -1,0 +1,63 @@
+/* Loading, empty and error states, and toasts (S33). */
+
+.skeleton-cover { aspect-ratio: 1; border-radius: var(--radius-md); }
+.skeleton-line { height: 14px; }
+.skeleton-line.short { width: 60%; }
+.skeleton-title { height: 40px; width: min(100%, 22rem); }
+
+.state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 36rem;
+  padding: var(--space-6);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+}
+.state-error { border-style: solid; border-color: var(--danger); background: var(--danger-bg); }
+.state-error h3 { color: var(--danger); }
+
+/* ---- Toasts: bottom center, above the player bar and the phone tab bar ---- */
+.toast-region {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--player-height) + var(--tabbar-height) + var(--space-4));
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(32rem, calc(100vw - 2 * var(--space-4)));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.toast-region > div { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-sheet);
+  font-size: var(--text-sm);
+  pointer-events: auto;
+}
+.toast-success { border-color: var(--success); }
+.toast-error { border-color: var(--danger); background: var(--danger-bg); color: var(--danger); }
+.toast-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.toast-close:hover { background: rgb(255 255 255 / 0.1); }

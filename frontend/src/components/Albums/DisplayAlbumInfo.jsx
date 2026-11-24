@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { showAlbum } from "../../store/albums";
 import CreateSongModal from "../CreateSong/CreateSongModal";
@@ -9,7 +9,8 @@ import AddSongModal from "../Playlists/AddSongModal";
 import DeleteSong from "../Songs/DeleteSong";
 import UpdateSongModal from "../UpdateSong/UpdateSongModal";
 import { playSong } from "../../store/player";
-import { Cover, PlayButton, usePageTitle } from "../common";
+import PageNotFound from "../PageNotFound";
+import { Cover, PlayButton, usePageTitle, useLoad, SkeletonDetail, ErrorState, EmptyState } from "../common";
 import '../../styles/pages.css';
 
 const DisplayAlbumInfo = () => {
@@ -19,9 +20,7 @@ const DisplayAlbumInfo = () => {
     const dispatch = useDispatch();
     usePageTitle(album?.title);
 
-    useEffect(() => {
-        dispatch(showAlbum(parseInt(albumId)));
-    }, [dispatch, albumId]);
+    const { status, notFound, reload } = useLoad(() => dispatch(showAlbum(parseInt(albumId))), [dispatch, albumId]);
 
     const playSongBtn = useCallback(
         (song) => {
@@ -30,7 +29,14 @@ const DisplayAlbumInfo = () => {
         [dispatch, album]
     );
 
-    if (!album) return null;
+    if (notFound) {
+        return <PageNotFound title="Album not found" message="This album doesn't exist, or it was deleted." />;
+    }
+    if (!album) {
+        return status === 'error'
+            ? <div className="page"><ErrorState title="Couldn't load this album" onRetry={reload} /></div>
+            : <SkeletonDetail label="Loading album" />;
+    }
 
     return (
         <div className="page">
@@ -82,7 +88,11 @@ const DisplayAlbumInfo = () => {
                         </li>
                     ))}
                 </ul>
-                {album.Songs.length === 0 && <p className="muted">No songs on this album yet.</p>}
+                {album.Songs.length === 0 && (
+                    <EmptyState title="No songs on this album yet">
+                        {user?.id === album.userId ? 'Use "Create Song" above to upload the first one.' : 'Check back soon.'}
+                    </EmptyState>
+                )}
             </section>
         </div>
     )

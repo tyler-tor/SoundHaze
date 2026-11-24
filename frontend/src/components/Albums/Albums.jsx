@@ -1,12 +1,12 @@
 import { useSelector, useDispatch } from "react-redux";
-import { useEffect } from 'react';
 import { NavLink } from "react-router-dom";
 import { getAlbums } from "../../store/albums";
 import CreateSongModal from "../CreateSong/CreateSongModal";
 import DeleteAlbum from "./DeleteAlbum";
 import UpdateAlbumModal from "../UpdateAlbum/UpdateAlbumModal";
 import CreateAlbumModal from "../CreateAlbum/CreateAlbumModal";
-import { Cover, usePageTitle } from "../common";
+import DemoUser from "../DemoUser/DemoUser";
+import { Cover, usePageTitle, useLoad, SkeletonGrid, EmptyState, ErrorState } from "../common";
 import '../../styles/pages.css';
 
 const Albums = () => {
@@ -15,9 +15,7 @@ const Albums = () => {
     const dispatch = useDispatch();
     usePageTitle('Albums');
 
-    useEffect(() => {
-        dispatch(getAlbums())
-    }, [dispatch]);
+    const { status, reload } = useLoad(() => dispatch(getAlbums()), [dispatch]);
 
     return (
         <div className="page">
@@ -28,6 +26,20 @@ const Albums = () => {
                 </div>
                 {user && <CreateAlbumModal />}
             </div>
+            {albums.length === 0 && status === 'loading' && <SkeletonGrid label="Loading albums" />}
+            {albums.length === 0 && status === 'error' && (
+                <ErrorState title="Couldn't load albums" onRetry={reload} />
+            )}
+            {albums.length === 0 && status === 'ready' && (
+                <EmptyState
+                    title="No albums yet"
+                    action={user ? <CreateAlbumModal /> : <DemoUser className="btn btn-primary">Try the demo</DemoUser>}
+                >
+                    {user
+                        ? 'An album holds your songs. Create one with a cover image, then add songs to it.'
+                        : 'Log in, or try the demo, to create the first one.'}
+                </EmptyState>
+            )}
             <div className="grid">
                 {albums.map(album => (
                     <article className="tile" key={album.id}>

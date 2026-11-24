@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { NavLink } from 'react-router-dom';
 import { getPlaylists } from '../../store/playlists';
 import CreatePlaylistModal from '../CreatePlaylist/CreatePlaylistModal';
 import DeletePlaylist from './DeletePlaylist';
 import UpdatePlaylistModal from './UpdatePlaylistModal';
-import { Cover, usePageTitle } from '../common';
+import DemoUser from '../DemoUser/DemoUser';
+import { Cover, usePageTitle, useLoad, SkeletonGrid, EmptyState, ErrorState } from '../common';
 import '../../styles/pages.css';
 
 function Playlists() {
@@ -14,9 +15,7 @@ function Playlists() {
     const dispatch = useDispatch();
     usePageTitle('Playlists');
 
-    useEffect(() => {
-        dispatch(getPlaylists());
-    }, [dispatch]);
+    const { status, reload } = useLoad(() => dispatch(getPlaylists()), [dispatch]);
 
     return (
         <div className='page'>
@@ -27,6 +26,20 @@ function Playlists() {
                 </div>
                 {user && <CreatePlaylistModal />}
             </div>
+            {playlists.length === 0 && status === 'loading' && <SkeletonGrid label='Loading playlists' />}
+            {playlists.length === 0 && status === 'error' && (
+                <ErrorState title="Couldn't load playlists" onRetry={reload} />
+            )}
+            {playlists.length === 0 && status === 'ready' && (
+                <EmptyState
+                    title='No playlists yet'
+                    action={user ? <CreatePlaylistModal /> : <DemoUser className='btn btn-primary'>Try the demo</DemoUser>}
+                >
+                    {user
+                        ? 'A playlist collects songs from any album. Create one, then use "Add to playlist" on a song.'
+                        : 'Log in, or try the demo, to create the first one.'}
+                </EmptyState>
+            )}
             <div className='grid'>
                 {playlists.map(playlist => (
                     <article className='tile' key={playlist.id}>
