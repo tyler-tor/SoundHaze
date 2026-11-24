@@ -93,6 +93,9 @@ const uploadToS3 = async (file) => {
       Key: key,
       Body: buffer,
       ContentType: mimetype,
+      // Every upload gets a unique random key (S8), so a stored file never
+      // changes: browsers and CloudFront may keep it for a year (S29).
+      CacheControl: "public, max-age=31536000, immutable",
     },
   }).done();
   return key;

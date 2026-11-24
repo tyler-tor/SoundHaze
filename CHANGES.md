@@ -44,6 +44,7 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S25 (plan said "depends on S37"):** S37 (Postgres-safe seeds) is not in this batch. The migration dedupes join rows itself, so it does not need it.
 - **S26 (/api/my/library):** the plan marks the combined library endpoint as optional. Not done: it would change three store thunks and the Home page for a small saving on three small requests.
 - **S27 (width/height):** the plan asks for `width`/`height` on every cover `<img>`. Done in S35 through one shared `Cover` component instead of editing every old component twice (they are rewritten there). `sharp` resizing (optional in the plan) **was** done.
+- **S29 (depends on S43/S44):** neither exists yet, so only the parts that live in this repo's code were done (Express static serving, API `no-store`, S3 `CacheControl` on uploads). The deploy-script and CloudFront parts are left for S43/S44.
 
 ## Open questions for Tyler
 
@@ -565,3 +566,13 @@ _New item (not in the original plan), done first at Tyler's request._
 - **Files:** `frontend/src/store/player.js`, `components/Player/Player.jsx` + `Player.css`, `Songs.jsx`, `DisplayAlbumInfo.jsx`, `DisplayPlaylistInfo.jsx`, `frontend/package.json` (+ lock)
 - **How to verify** (verified): jsdom on the album page: 13 play buttons; click play on the first -> `{index: 0, queue: 13, song: "My Way"}`, header shows title and artist; the Skip button moves to "Oracle"; `<audio preload="metadata">`; no console errors or warnings. Real audio playback cannot be tested without a browser.
 - **Things to watch:** the artist name is missing in the player when a song is started from the Songs page or a playlist (those lists only have the user id). A later change could add the artist to the song list API.
+
+## S29 — Caching headers
+- **Problem:** nothing told browsers or a CDN how long files may be reused, so everything was re-checked on every visit (or cached unpredictably).
+- **What changed:**
+  - New `backend/utils/staticFrontend.js` (used by `routes/index.js` in production): `/assets/*` (Vite's content-hashed files) get `Cache-Control: public, max-age=31536000, immutable`; `index.html` gets `no-cache`; other files in `dist/` get one day.
+  - Every `/api/*` response, and `/api/csrf/restore`, gets `Cache-Control: no-store` (answers depend on who is logged in and change whenever anyone edits).
+  - Uploads to S3 are saved with `Cache-Control: public, max-age=31536000, immutable`. This is safe because each upload has a unique random key (S8), so a file never changes.
+- **Files:** `backend/utils/staticFrontend.js`, `backend/routes/index.js`, `backend/awsS3.js`
+- **How to verify** (verified): a test Express app mounting `serveFrontend` on the real `frontend/dist`: `/` and `/songs/1` -> `no-cache`, `/assets/index-*.js` -> `max-age=31536000, immutable`, `/default-avatar.svg` -> `max-age=86400`; dev backend: `/api/songs/1`, `/api/albums`, `/api/csrf/restore` -> `no-store`, login still works. **Not verified:** the `CacheControl` field on a real S3 upload (no AWS credentials here) and `NODE_ENV=production` end to end (needs Postgres).
+- **Things to watch:** the plan also lists the deploy script (S44) and Terraform/CloudFront cache policies (S43); those items do not exist yet. When they are written, the S3 *frontend* bucket upload needs the same two rules (hashed assets immutable, `index.html` no-cache).
