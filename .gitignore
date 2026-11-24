@@ -4,3 +4,9 @@ build
 .DS_Store
 *.db
 dist
+
+# Private learning notes live in the separate portfolio-notes repo
+CHANGES.md
+MODERNIZATION_PLAN.md
+docs/WALKTHROUGH.md
+docs/MAPBOX.md

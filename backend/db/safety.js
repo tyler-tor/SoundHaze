@@ -3,7 +3,7 @@
 // Guard for anything that deletes data (seed undo, migration undo, db:reset).
 // Those commands are for local development only. In production they would
 // wipe real users' data, which is exactly what the old Render deploy did
-// on every deploy. See CHANGES.md, S0.
+// on every deploy.
 'use strict';
 
 function isProduction() {

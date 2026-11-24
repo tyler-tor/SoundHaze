@@ -10,7 +10,6 @@
 //   - Everything runs in one transaction: either all demo data is inserted
 //     or none of it.
 //   - "down" (seed undo) refuses to run when NODE_ENV=production.
-// See CHANGES.md, S0.
 'use strict';
 
 const bcrypt = require('bcryptjs');

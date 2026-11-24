@@ -3,7 +3,7 @@
 // Demo data for the seeder in db/seeders/20261123000000-demo-data.js.
 // Relationships use natural keys (username, album title, song title) instead
 // of fixed numeric ids, so the database picks the ids itself. That keeps
-// Postgres' auto-increment counters correct (see CHANGES.md, S0).
+// Postgres' auto-increment counters correct.
 //
 // The passwords are for public demo accounts only; they are hashed with
 // bcrypt when the seeder runs.
