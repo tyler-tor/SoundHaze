@@ -51,7 +51,7 @@ function ImageComponent({ setUrl }) {
                 </label>
                 <button type="submit" className='btn btn-secondary btn-sm'>Upload</button>
             {imageLoading && <p>Uploading...</p>}
-            <ul className='error-list' role='alert'>
+            <ul className='error-list' aria-live='polite'>
                 {errors.map((error, idx) => (
                     <li key={idx}>{error}</li>
                 ))}

@@ -16,7 +16,8 @@ const UpdateSongModal = ({song, userId}) => {
 
     return (
         <>
-            <button onClick={handleClick}
+            <button type="button" onClick={handleClick}
+            aria-label={`Update Song: ${song.title}`}
             className="btn btn-ghost btn-sm">Update Song</button>
             {showModal && (
                 <Modal onClose={() => setShowModal(false)} title="Edit song">

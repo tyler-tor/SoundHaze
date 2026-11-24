@@ -25,8 +25,10 @@ function DeletePlaylist({ playlist, userId }) {
     }
     return (
         <button
+        type="button"
         onClick={handleClick}
-        className="btn btn-ghost btn-sm">
+        aria-label={`Delete Playlist: ${playlist.name}`}
+        className="btn btn-ghost btn-sm text-danger">
             Delete Playlist
         </button>
     )

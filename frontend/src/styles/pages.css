@@ -32,7 +32,8 @@
 .detail-artist { display: flex; align-items: center; gap: var(--space-2); color: var(--text-muted); }
 .artist-name { color: var(--text); }
 .avatar-xs { width: 28px; height: 28px; border-radius: 50%; font-size: var(--text-sm); }
-.detail-header .play-btn { width: 24px; height: 24px; padding: 14px; }
+.detail-header .play-btn { width: 56px; height: 56px; }
+.detail-header .play-btn svg { width: 30px; height: 30px; }
 
 /* ---- Sign-up page ---- */
 .auth-page { display: flex; justify-content: center; }

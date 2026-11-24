@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal } from '../../context/Modal';
 import DeletePlaylistSong from './DeletePlaylistSong';
 
-function DeletePlaylistSongModal({ songId, playlistId }) {
+function DeletePlaylistSongModal({ songId, songTitle, playlistId }) {
     const [showModal, setShowModal] = useState(false);
 
     const handleClick = (e) => {
@@ -11,17 +11,18 @@ function DeletePlaylistSongModal({ songId, playlistId }) {
     }
 
     return (
-        <div>
-            <button onClick={handleClick}
+        <>
+            <button type="button" onClick={handleClick}
+            aria-label={songTitle ? `Remove from playlist: ${songTitle}` : undefined}
             className="btn btn-ghost btn-sm">
-                Remove from Playlist
+                Remove from playlist
             </button>
             {showModal && (
                 <Modal onClose={() => setShowModal(false)} title="Remove from playlist">
                     <DeletePlaylistSong songId={songId} playlistId={playlistId} setShowModal={setShowModal} />
                 </Modal>
             )}
-        </div>
+        </>
     )
 }
 

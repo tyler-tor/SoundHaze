@@ -23,7 +23,7 @@ function LoginForm() {
     return (
       <form onSubmit={handleSubmit}
       className="form">
-        <ul className="error-list" role="alert">
+        <ul className="error-list" aria-live="polite">
           {errors.map((error, idx) => (
             <li key={idx}>{error}</li>
           ))}
@@ -32,6 +32,7 @@ function LoginForm() {
           Username or Email
           <input
             type="text"
+            autoComplete="username"
             value={credential}
             onChange={(e) => setCredential(e.target.value)}
             required
@@ -41,6 +42,7 @@ function LoginForm() {
           Password
           <input
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required

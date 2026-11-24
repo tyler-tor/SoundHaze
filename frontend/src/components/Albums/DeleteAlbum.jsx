@@ -28,8 +28,10 @@ const DeleteAlbum = ({album, userId}) => {
 
     return (
         <button
+        type="button"
         onClick={handleClick}
-        className="btn btn-ghost btn-sm">
+        aria-label={`Delete Album: ${album.title}`}
+        className="btn btn-ghost btn-sm text-danger">
             Delete Album
         </button>
     )

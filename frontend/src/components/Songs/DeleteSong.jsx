@@ -22,8 +22,10 @@ const DeleteSong = ({song, userId}) => {
 
     return (
         <button
+        type="button"
         onClick={handleClick}
-        className="btn btn-ghost btn-sm">
+        aria-label={`Delete Song: ${song.title}`}
+        className="btn btn-ghost btn-sm text-danger">
             Delete Song
         </button>
     )

@@ -3,8 +3,7 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { showSong } from '../../store/songs';
 import { playSong } from '../../store/player';
-import { HiPlay } from 'react-icons/hi';
-import { Cover, usePageTitle } from '../common';
+import { Cover, PlayButton, usePageTitle } from '../common';
 import '../../styles/pages.css';
 
 const DisplaySongInfo = () => {
@@ -33,7 +32,7 @@ const DisplaySongInfo = () => {
                     {song.Album && (
                         <p className='muted'>From <Link to={`/albums/${song.albumId}`}>{song.Album.title}</Link></p>
                     )}
-                    <HiPlay className='play-btn' onClick={() => dispatch(playSong(song, [], song.Artist?.username))} />
+                    <PlayButton title={song.title} onClick={() => dispatch(playSong(song, [], song.Artist?.username))} />
                 </div>
             </header>
         </div>

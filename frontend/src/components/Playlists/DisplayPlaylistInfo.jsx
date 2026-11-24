@@ -3,11 +3,10 @@ import { useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { showPlaylist } from "../../store/playlists";
 import { playSong } from "../../store/player";
-import { HiPlay } from "react-icons/hi";
 import UpdatePlaylistModal from "./UpdatePlaylistModal";
 import DeletePlaylist from "./DeletePlaylist";
 import DeletePlaylistSongModal from "./DeletePlaylistSongModal";
-import { Cover, usePageTitle } from "../common";
+import { Cover, PlayButton, usePageTitle } from "../common";
 import '../../styles/pages.css';
 
 const DisplayPlaylistInfo = () => {
@@ -56,12 +55,7 @@ const DisplayPlaylistInfo = () => {
                 <ul className="tracklist">
                     {playlist.Songs.map(song => (
                         <li className="track" key={song.id}>
-                            <HiPlay className="play-btn"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    playSongBtn(song);
-                                }}
-                            />
+                            <PlayButton title={song.title} onClick={() => playSongBtn(song)} />
                             <div className="track-cover">
                                 <Cover src={song.previewImage} label={song.title} size={112} />
                             </div>
@@ -71,7 +65,7 @@ const DisplayPlaylistInfo = () => {
                             </div>
                             {playlist.userId === user?.id && (
                                 <div className="track-actions">
-                                    <DeletePlaylistSongModal songId={song.id} playlistId={playlist.id} />
+                                    <DeletePlaylistSongModal songId={song.id} songTitle={song.title} playlistId={playlist.id} />
                                 </div>
                             )}
                         </li>

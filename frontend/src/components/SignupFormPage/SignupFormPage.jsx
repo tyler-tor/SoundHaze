@@ -74,7 +74,7 @@ const SignupFormPage = () => {
             <section className='auth-card' aria-labelledby='signup-title'>
                 <h1 id='signup-title'>Create your account</h1>
                 <p className='lede muted'>Upload songs, make albums and build playlists.</p>
-                <ul className='error-list' role='alert'>
+                <ul className='error-list' aria-live='polite'>
                     {errors.map(err => (
                         <li key={err}>{err}</li>
                     ))}

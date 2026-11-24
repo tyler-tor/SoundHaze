@@ -680,3 +680,17 @@ _Done before S30-S34 on purpose (the plan says S30 is easier after S35): the new
 - **Files:** `frontend/src/context/Modal.jsx`, `Modal.css`, the nine `*Modal.jsx` components, `components/Playlists/DeletePlaylistSong.jsx`
 - **How to verify** (verified in jsdom): opening Log in -> `role=dialog`, `aria-modal=true`, labelled "Log in"; focus lands in the first input; `inert` set on 6 siblings; body scroll locked; Tab from the last control goes to the first and Shift+Tab from the first goes to the last; Escape closes, focus returns to the Log in button, `inert` and scroll lock are removed; Close button does the same. The create/edit flows from X1/X2 still pass. **Not tested:** a real screen reader. Quick manual check: Tab through a modal and press Escape.
 - **Things to watch:** `inert` is supported by all current browsers (Chrome 102+, Firefox 112+, Safari 15.5+).
+
+## S32 — Real buttons, labels and alt text
+_The sign-up labels, `type="email"` and autocomplete attributes were already done inside S35 (the page was rebuilt there); this item finished the rest._
+- **Problem:** play icons were SVGs with a click handler (no keyboard access, no name), several images had no `alt`, buttons like "Update Song" repeated with nothing to say which song, and form errors were not announced.
+- **What changed:**
+  - New `common/PlayButton`: a real `<button type="button" aria-label="Play {title}">` around the icon. Used on Songs, Album, Playlist and Song pages and now reachable with Tab, Enter and Space.
+  - Alt text: every `<img>` has an `alt`. Covers that sit next to their title are decorative (`alt=""`), the big cover on detail pages says "Cover of {title}", the upload preview says "Preview of the uploaded cover". Icons inside buttons are `aria-hidden`.
+  - Action buttons carry the item in their accessible name while keeping the visible text in it (WCAG "label in name"): "Update Song: {title}", "Delete Album: {title}", "Add to playlist: {title}", "Create Song in {album}", and so on. "+ to Playlist" is now written "Add to playlist". Delete buttons are red-tinted text.
+  - Form errors are `aria-live="polite"` lists (empty lists are taken out of the layout but stay in the page so later changes are announced).
+  - Login form: `autocomplete="username"` / `"current-password"`; Create Song audio input has an `accept` filter.
+  - Contrast check (computed from the token values): text on page/card/raised surface 16.8 / 15.2 / 13.5:1; secondary text 8.6 / 7.7 / 6.9:1; accent on page 7.7:1; dark text on the accent 7.7:1; danger text 9.3:1; input border on card 3.06:1 (WCAG 1.4.11 asks for 3:1).
+- **Files:** `components/common/PlayButton.jsx`, `Songs/*`, `Albums/*`, `Playlists/*`, `UpdateSong/UpdateSongModal.jsx`, `UpdateAlbum/UpdateAlbumModal.jsx`, `CreateSong/*`, `LoginFormModal/LoginForm.jsx`, `styles/base.css`, `styles/pages.css`
+- **How to verify** (verified in jsdom): an audit script visited `/`, `/songs`, `/albums`, `/playlists`, `/albums/1`, `/playlists/1`, `/songs/1` and found 0 images without `alt`, 0 icon-only buttons without a name, 0 inputs without a label, 0 clickable SVGs, exactly one `<h1>` per page and a distinct page title for each; 98 real play buttons on `/songs`. All earlier tours still pass. **Not tested:** with a screen reader or axe/Lighthouse (no browser). Please run Lighthouse's accessibility audit on a few pages.
+- **Things to watch:** the player's own controls come from `react-h5-audio-player`, which provides its own aria-labels ("Play", "Previous", "Skip", "Mute", progress slider).

@@ -1,6 +1,5 @@
 import { useSelector, useDispatch } from "react-redux";
 import { NavLink } from "react-router-dom";
-import { HiPlay } from "react-icons/hi";
 import { useEffect, useCallback } from 'react';
 import { getSongs } from "../../store/songs";
 import { getAlbums } from "../../store/albums";
@@ -9,7 +8,7 @@ import DeleteSong from "./DeleteSong";
 import CreateSongModal from "../CreateSong/CreateSongModal";
 import UpdateSongModal from "../UpdateSong/UpdateSongModal";
 import AddSongModal from '../Playlists/AddSongModal';
-import { Cover, usePageTitle } from "../common";
+import { Cover, PlayButton, usePageTitle } from "../common";
 import '../../styles/pages.css';
 
 const Songs = () => {
@@ -44,12 +43,7 @@ const Songs = () => {
                     <article className="tile" key={song.id}>
                         <div className="tile-cover">
                             <Cover src={song.previewImage} label={song.title} />
-                            <HiPlay className="play-btn"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    playSongBtn(song, songs);
-                                }}
-                            />
+                            <PlayButton title={song.title} onClick={() => playSongBtn(song, songs)} />
                         </div>
                         <div>
                             <NavLink to={`/songs/${song.id}`} className="tile-title" title={song.title}>
@@ -59,7 +53,7 @@ const Songs = () => {
                         </div>
                         {user && (
                             <div className='tile-actions'>
-                                <AddSongModal songId={song.id} />
+                                <AddSongModal songId={song.id} songTitle={song.title} />
                                 {(user.id === song.userId) && (
                                     <>
                                         <UpdateSongModal song={song} userId={user.id} />

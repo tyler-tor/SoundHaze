@@ -49,7 +49,7 @@ const CreateSong = ({ albumId, setShowModal }) => {
         <form
             onSubmit={handleSubmit}
             className="form">
-            <ul className="error-list" role="alert">
+            <ul className="error-list" aria-live="polite">
                 {errors.map((error, idx) => (
                     <li key={idx}
                         className='el-item'>{error}</li>
@@ -78,6 +78,7 @@ const CreateSong = ({ albumId, setShowModal }) => {
                 <input
                     type="file"
                     name="song"
+                    accept="audio/mpeg,audio/mp4,audio/x-m4a,.mp3,.m4a"
                     className="song-input"
                     // value={audioUrl}
                     onChange={updateSongFile}

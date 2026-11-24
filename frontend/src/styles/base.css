@@ -216,7 +216,9 @@ input[type='file']::file-selector-button {
   font-size: var(--text-sm);
   color: var(--danger);
 }
-.error-list:empty, .form-errors:empty { display: none; }
+/* An empty live region must stay in the page for screen readers to announce
+   later changes, so it is taken out of the layout instead of hidden. */
+.error-list:empty, .form-errors:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; }
 .error-list li, .form-errors li {
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
@@ -287,12 +289,13 @@ a.tile-title:hover { color: var(--accent); text-decoration: none; }
 }
 .tile-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-top: auto; }
 
-/* Round play button (an SVG icon today, a real <button> after S32) */
+/* Round play button: a real <button> holding the play icon (S32). */
 .play-btn {
-  box-sizing: content-box;
-  width: 22px;
-  height: 22px;
-  padding: 11px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: 0;
   border-radius: 50%;
   background: var(--accent);
@@ -301,6 +304,7 @@ a.tile-title:hover { color: var(--accent); text-decoration: none; }
   box-shadow: 0 6px 16px -4px rgb(0 0 0 / 0.55);
   transition: background-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
+.play-btn svg { width: 24px; height: 24px; }
 .play-btn:hover { background: var(--accent-hover); transform: scale(1.06); }
 .play-btn:active { transform: scale(0.97); }
 
@@ -335,7 +339,7 @@ a.track-title:hover { color: var(--accent); text-decoration: none; }
   white-space: nowrap;
 }
 .track-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-1); }
-.track .play-btn { width: 18px; height: 18px; padding: 9px; box-shadow: none; }
+.track .play-btn { width: 40px; height: 40px; box-shadow: none; }
 
 /* ---- Skeleton / loading (used from S33) ---- */
 .skeleton {
@@ -376,3 +380,6 @@ a.tile-cover:hover { text-decoration: none; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: var(--space-4) var(--space-3); }
   .btn-lg { width: 100%; }
 }
+
+.text-danger { color: var(--danger); }
+.btn.text-danger:hover:not(:disabled) { color: var(--danger); background: var(--danger-bg); }

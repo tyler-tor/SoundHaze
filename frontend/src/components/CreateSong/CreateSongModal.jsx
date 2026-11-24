@@ -19,6 +19,7 @@ const CreateSongModal = ({album, userId, className = 'btn btn-primary'}) => {
     return (
         <>
             <button type="button" onClick={handleClick}
+            aria-label={album ? `Create Song in ${album.title}` : undefined}
             className={className}>Create Song</button>
             {showModal && (
                 <Modal onClose={() => setShowModal(false)} title="Add a song">

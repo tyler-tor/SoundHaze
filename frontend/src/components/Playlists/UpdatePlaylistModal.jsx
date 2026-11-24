@@ -16,7 +16,7 @@ function UpdatePlaylistModal({ playlist, userId }) {
 
     return (
         <>
-            <button onClick={handleClick} className="btn btn-ghost btn-sm">Update Playlist</button>
+            <button type="button" onClick={handleClick} aria-label={`Update Playlist: ${playlist.name}`} className="btn btn-ghost btn-sm">Update Playlist</button>
             {showModal && (
                 <Modal onClose={() => setShowModal(false)} title="Edit playlist">
                     <UpdatePlaylist playlist={playlist} setShowModal={setShowModal} />

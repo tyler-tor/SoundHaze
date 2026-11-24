@@ -36,7 +36,7 @@ function UpdatePlaylist({ playlist, setShowModal }) {
     <form
     onSubmit={handleSubmit}
     className="form">
-      <ul className="error-list" role="alert">
+      <ul className="error-list" aria-live="polite">
         {errors.map((error, index) => (
           <li key={index}>{error}</li>
         ))}

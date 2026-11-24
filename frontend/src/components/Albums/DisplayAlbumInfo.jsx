@@ -9,8 +9,7 @@ import AddSongModal from "../Playlists/AddSongModal";
 import DeleteSong from "../Songs/DeleteSong";
 import UpdateSongModal from "../UpdateSong/UpdateSongModal";
 import { playSong } from "../../store/player";
-import { HiPlay } from "react-icons/hi";
-import { Cover, usePageTitle } from "../common";
+import { Cover, PlayButton, usePageTitle } from "../common";
 import '../../styles/pages.css';
 
 const DisplayAlbumInfo = () => {
@@ -61,12 +60,7 @@ const DisplayAlbumInfo = () => {
                 <ul className="tracklist">
                     {album.Songs.map(song => (
                         <li className="track" key={song.id}>
-                            <HiPlay className="play-btn"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    playSongBtn(song);
-                                }}
-                            />
+                            <PlayButton title={song.title} onClick={() => playSongBtn(song)} />
                             <div className="track-cover">
                                 <Cover src={album.previewImage} label={song.title} size={112} />
                             </div>
@@ -76,7 +70,7 @@ const DisplayAlbumInfo = () => {
                             </div>
                             {user && (
                                 <div className="track-actions">
-                                    <AddSongModal songId={song.id} />
+                                    <AddSongModal songId={song.id} songTitle={song.title} />
                                     {user.id === song.userId && (
                                         <>
                                             <UpdateSongModal song={song} userId={user.id} />

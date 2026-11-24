@@ -36,7 +36,7 @@ function AddSong({ songId, setShowModal }) {
     <form
     onSubmit={handleSubmit}
     className="form">
-      <ul className='error-list' role='alert'>
+      <ul className='error-list' aria-live='polite'>
         {errors.map((error, idx) => (
           <li key={idx}>{error}</li>
         ))}
