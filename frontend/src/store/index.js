@@ -18,13 +18,15 @@ import songsReducer from './songs';
 import albumsReducer from './albums';
 import playerReducer from './player';
 import playlistsReducer from './playlists';
+import commentsReducer from './comments';
 
 const reducer = {
   session: sessionReducer,
   songs: songsReducer,
   albums: albumsReducer,
   player: playerReducer,
-  playlists: playlistsReducer
+  playlists: playlistsReducer,
+  comments: commentsReducer
 };
 
 const configureStore = (preloadedState) =>

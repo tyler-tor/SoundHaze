@@ -120,7 +120,9 @@ router.get('/:songId/comments', async(req, res, next) => {
             },
             include: {
                 model: User.scope('includedInComment')
-            }
+            },
+            // Newest first, so the page can show them as they are (S34).
+            order: [['createdAt', 'DESC'], ['id', 'DESC']]
         })
 
         return res.json({Comments})
