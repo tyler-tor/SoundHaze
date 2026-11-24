@@ -4,7 +4,6 @@ const { Song, User, Album, Comment } = require('../../db/models');
 const { check } = require('express-validator');
 const { handleValidationErrors, validateIdParam } = require('../../utils/validation');
 const { pick } = require('../../utils/pick');
-const app = require('../../app');
 
 const router = express.Router();
 router.param('commentId', validateIdParam);

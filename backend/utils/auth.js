@@ -71,8 +71,4 @@ const requireAuth = [restoreUser,
     return next(err);
 }];
 
-const requireProperAuthorize = [
-
-]
-
 module.exports = { setTokenCookie, restoreUser, requireAuth };

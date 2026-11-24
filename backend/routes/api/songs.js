@@ -5,8 +5,6 @@ const { check, query, matchedData } = require('express-validator');
 const { handleValidationErrors, validateIdParam } = require('../../utils/validation');
 const { requireOwner } = require('../../utils/ownership');
 const { pick } = require('../../utils/pick');
-const app = require('../../app');
-const song = require('../../db/models/song');
 
 const router = express.Router();
 router.param('songId', validateIdParam);

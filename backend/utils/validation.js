@@ -33,15 +33,7 @@ const validateIdParam = (req, _res, next, value, name) => {
     return next(err);
 };
 
-const forbiddenErr = (next) => {
-    const err = new Error('Forbidden');
-    err.title = 'Forbidden';
-    err.status = 403;
-    return next(err);
-}
-
 module.exports = {
     handleValidationErrors,
-    validateIdParam,
-    forbiddenErr
+    validateIdParam
 }

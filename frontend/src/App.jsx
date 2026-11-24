@@ -5,7 +5,6 @@ import SignupFormPage from './components/SignupFormPage/SignupFormPage';
 import Player from './components/Player';
 import * as sessionActions from './store/session';
 import Navigation from './components/Navigation';
-import Footer from './components/Footer';
 import Songs from './components/Songs/Songs';
 import Albums from './components/Albums/Albums';
 import Playlists from './components/Playlists/Playlists';

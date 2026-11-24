@@ -110,9 +110,6 @@ const publicUrlFor = (key) =>
 // Uploads one multer file and returns the URL to save in the database.
 const singlePublicFileUpload = async (file) => publicUrlFor(await uploadToS3(file));
 
-const multiplePublicFileUpload = async (files) =>
-  Promise.all(files.map((file) => singlePublicFileUpload(file)));
-
 // (The unused "private upload" helpers and signed-URL helper were removed in S18.)
 
 // --------------------------- Storage ------------------------
@@ -152,8 +149,6 @@ const withMulterErrors = (middleware, kind) => (req, res, next) =>
 // kind is "image" (default) or "audio"
 const singleMulterUpload = (nameOfKey, kind = "image") =>
   withMulterErrors(makeMulter(kind, 1).single(nameOfKey), kind);
-const multipleMulterUpload = (nameOfKey, kind = "image") =>
-  withMulterErrors(makeMulter(kind, 10).array(nameOfKey), kind);
 
 module.exports = {
   s3,
@@ -161,7 +156,5 @@ module.exports = {
   publicUrlFor,
   optimizeImage,
   singlePublicFileUpload,
-  multiplePublicFileUpload,
   singleMulterUpload,
-  multipleMulterUpload,
 };

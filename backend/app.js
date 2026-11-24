@@ -1,7 +1,6 @@
 const express = require('express');
 // Express 5 passes errors thrown in async route handlers (rejected promises)
 // to the error handler by itself, so express-async-errors is no longer needed.
-const { check } = require('express-validator');
 const morgan = require('morgan');
 const cors = require('cors');
 const { csrfProtection } = require('./utils/csrf');
@@ -11,7 +10,6 @@ const { environment } = require('./config');
 const isProduction = environment === 'production';
 const routes = require('./routes');
 const { ValidationError } = require('sequelize');
-const { handleValidationErrors, forbiddenErr } = require('./utils/validation');
 
 const app = express();
 

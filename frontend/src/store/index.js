@@ -14,7 +14,6 @@ import sessionReducer from './session';
 import songsReducer from './songs';
 import albumsReducer from './albums';
 import playerReducer from './player';
-import artistsReducer from './artists';
 import playlistsReducer from './playlists';
 
 const reducer = {
@@ -22,7 +21,6 @@ const reducer = {
   songs: songsReducer,
   albums: albumsReducer,
   player: playerReducer,
-  artists: artistsReducer,
   playlists: playlistsReducer
 };
 

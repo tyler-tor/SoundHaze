@@ -1,40 +1,21 @@
 import { csrfFetch } from "./csrf";
 
-const ADD_SONG_TO_PLAYLIST = 'playlistSongs/ADD_SONG';
-const REMOVE_SONG_FROM_PLAYLIST = 'playlistSongs/REMOVE_SONG';
+// Thunks for the songs inside a playlist. They only call the API and return
+// the JSON. (They used to dispatch playlistSongs/* actions that no reducer
+// handled, which did nothing. Pages re-fetch the playlist with showPlaylist()
+// after a change instead.)
 
-const addPlaylistSongAction = (data) => ({
-    type: ADD_SONG_TO_PLAYLIST,
-    payload: data
-})
-
-const deletePlaylistSongAction = (data) => ({
-    type: REMOVE_SONG_FROM_PLAYLIST,
-    payload: data
-})
-
-export const addSongToPlaylist = (data) => async (dispatch) => {
-    const {playlistId} = data
+export const addSongToPlaylist = ({ playlistId, songId }) => async () => {
     const res = await csrfFetch(`/api/playlists/${playlistId}/songs`, {
         method: 'POST',
-        body: JSON.stringify(data)
+        body: JSON.stringify({ playlistId, songId })
     });
-    if(res.ok) {
-        const addedSongs = await res.json();
-        await dispatch(addPlaylistSongAction(addedSongs));
-        return addedSongs;
-    }
+    return res.json();
 };
 
-export const removeSongFromPlaylist = (data) => async (dispatch) => {
-    const {playlistId, songId} = data;
+export const removeSongFromPlaylist = ({ playlistId, songId }) => async () => {
     const res = await csrfFetch(`/api/playlists/${playlistId}/songs/${songId}`, {
-        method: 'DELETE',
+        method: 'DELETE'
     });
-
-    if(res.ok) {
-        const deletedSongFromPlaylist = await res.json();
-        dispatch(deletePlaylistSongAction(data));
-        return deletedSongFromPlaylist;
-    }
-}
+    return res.json();
+};
