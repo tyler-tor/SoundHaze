@@ -54,3 +54,15 @@
 .home-header { align-items: center; }
 .home-who { display: flex; align-items: center; gap: var(--space-4); }
 .home-avatar { width: 72px; height: 72px; border-radius: 50%; font-size: var(--text-xl); }
+
+@media (max-width: 720px) {
+  .hero { padding: var(--space-6) 0 var(--space-6); }
+  .hero-haze { inset: -4rem -2rem; }
+  .hero-haze-blob { width: 16rem; height: 16rem; right: -6rem; }
+  .blob-1 { right: 2rem; top: 8rem; width: 12rem; height: 12rem; }
+  .blob-2 { display: none; }
+  .home-who { width: 100%; }
+}
+@media (max-width: 480px) {
+  .hero-actions .btn { flex: 1 1 100%; }
+}

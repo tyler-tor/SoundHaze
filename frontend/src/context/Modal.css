@@ -28,3 +28,14 @@
   background: var(--surface);
   box-shadow: var(--shadow-sheet);
 }
+
+/* Phones: the dialog becomes a sheet that slides up from the bottom edge. */
+@media (max-width: 600px) {
+  #modal { align-items: flex-end; padding: 0; }
+  #modal-content {
+    width: 100%;
+    max-height: 92dvh;
+    padding: var(--space-5) var(--space-4) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+}

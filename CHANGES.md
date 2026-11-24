@@ -47,6 +47,7 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S29 (depends on S43/S44):** neither exists yet, so only the parts that live in this repo's code were done (Express static serving, API `no-store`, S3 `CacheControl` on uploads). The deploy-script and CloudFront parts are left for S43/S44.
 - **S35 (before S30-S34):** done first, see its section. It also contains the new welcome page (with the Try the demo button), the sign-up form labels and the footer, so S32/S33 only add what is left.
 - **S35 (artist link):** the plan's song page wants a link to the artist. There is no artist page, so the artist name is plain text on album pages (and a link to the album on song pages).
+- **S30 (after S35):** responsive rules were written on top of the new tokens; the plan's `hamburger or bottom tabs` choice is bottom tabs.
 
 ## Open questions for Tyler
 
@@ -655,3 +656,15 @@ _Done before S30-S34 on purpose (the plan says S30 is easier after S35): the new
 - **Files:** `frontend/src/styles/*`, `frontend/src/index.css`, `frontend/src/components/common/*`, most components under `frontend/src/components/*`, `frontend/index.html`, `frontend/public/{favicon.svg,manifest.json}`, `frontend/package.json` (+ lock)
 - **How to verify** (verified in jsdom only): `npm run build` passes (CSS 23 KB, 7 KB gzipped); the jsdom tours (all pages, create album/playlist/song through the modals, the error cases from X2, the player queue) pass with 0 console errors on a React 19 development build. **Not verified:** how it actually looks. Open the app in a browser, check each page at desktop width, and report anything that looks off.
 - **Things to watch:** the JS bundle is 111 KB gzipped (was 85 KB at S24); the increase comes from React 19 (X4) and `react-h5-audio-player` 3.10 (S28), not from this item. The mobile layout and the bottom tab bar come in S30; modal accessibility in S31; real `<button>` play controls in S32.
+
+## S30 — Responsive layout
+- **Problem:** there were no `@media` queries at all, so the app only worked on a desktop screen.
+- **What changed:**
+  - **Mobile navigation:** at 900px wide and below, the top links hide and a **bottom tab bar** (Home, Songs, Albums, Playlists, each with an icon) appears, above which the player bar sits. It lives outside `<header>` because the header's `backdrop-filter` would turn a `position: fixed` child into a header-relative one. The bar respects the iPhone home-indicator inset (`env(safe-area-inset-bottom)`). Below 1024px the header's "Sign up" button hides to make room (the welcome page still has "Create an account").
+  - **Cards reflow by themselves:** `grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr))`; at 480px and below the minimum is 128px, so a 375px phone shows two columns.
+  - **Player bar on phones (720px and below):** now-playing (cover, title, artist) on one row, controls + progress on the row below; volume and repeat hide (phones have hardware volume); the page's bottom padding follows the bar's height (`--player-height`, `--tabbar-height`).
+  - **Detail pages** stack (cover above text), **track rows** wrap their action buttons to a second line, **page headers** stack with full-width buttons, the welcome buttons become full width, and the **modal becomes a bottom sheet** (full width, rounded top, scrolls inside) at 600px and below.
+  - `overflow-x: clip` on `body` so nothing can ever make the page scroll sideways.
+- **Files:** `components/Navigation/{Navigation.jsx,Navigation.css}`, `components/Player/Player.css`, `styles/{base,pages}.css`, `components/HomePage/homepage.css`, `context/Modal.css`
+- **How to verify** (verified: markup only): jsdom shows both navigation landmarks ("Main" and "Mobile", 4 links each; CSS shows one at a time) and the tours still pass with 0 errors. **Not verified:** the actual layout at 375px (no browser). In a browser: DevTools device mode at 375x667 and 768x1024; check the tab bar, the two-column grid, the player bar, a modal, and that nothing scrolls sideways.
+- **Things to watch:** the tab bar is shown to logged-out visitors as well (the pages are public).

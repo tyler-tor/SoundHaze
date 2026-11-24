@@ -26,6 +26,7 @@ body {
   font-family: var(--font-body);
   font-size: var(--text-base);
   line-height: var(--leading-body);
+  overflow-x: clip;   /* never scroll sideways, even if something is too wide */
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -356,3 +357,22 @@ main:focus { outline: none; }
 a.tile-cover { display: block; }
 a.tile-cover:hover { text-decoration: none; }
 .welcome { overflow-x: clip; }
+
+/* ---- Small screens (S30) ---- */
+@media (max-width: 720px) {
+  .page { padding-top: var(--space-5); }
+  .page-header { margin-bottom: var(--space-5); }
+  .page-header > .row,
+  .page-header > .btn { width: 100%; }
+  .section { margin-top: var(--space-6); }
+
+  /* tracks: play + cover + text on one row, actions wrap underneath */
+  .track { grid-template-columns: auto 48px minmax(0, 1fr); gap: var(--space-3); }
+  .track-cover { width: 48px; }
+  .track-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
+@media (max-width: 480px) {
+  .grid { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: var(--space-4) var(--space-3); }
+  .btn-lg { width: 100%; }
+}
