@@ -2,6 +2,7 @@ import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import AudioPlayer from 'react-h5-audio-player';
+import 'react-h5-audio-player/lib/styles.css'; // base layout; Player.css below re-skins it
 import { playNext, playPrevious } from '../../store/player';
 import { Cover } from '../common';
 import './Player.css';

@@ -733,3 +733,10 @@ _The sign-up labels, `type="email"` and autocomplete attributes were already don
 - Run `npm run db:migrate` in `backend/` to add the indexes (S25). It removes duplicate playlist-song rows first.
 - sqlite3 6 needs glibc 2.38 or newer for its prebuilt binary; on older Linux run `npm rebuild sqlite3 --build-from-source`.
 - Uploaded images now come back as WebP; no config changes are needed.
+
+## Fix — player bar layout (follow-up to S28/S35)
+- **Problem:** the player's own base stylesheet (`react-h5-audio-player/lib/styles.css`) was never imported, so the controls stacked vertically and the progress/volume bars rendered as plain boxes. Missed because the jsdom checks can't see layout.
+- **What changed:** imported the base stylesheet in `Player.jsx` before `Player.css`, so the "dusk" skin layers on top of a working layout.
+- **Files:** `frontend/src/components/Player/Player.jsx`
+- **How to verify:** `npm run dev` in `frontend/`, open http://localhost:3000: the bottom bar shows controls in one row with the time on each side of the progress bar.
+- **Things to watch:** none.
