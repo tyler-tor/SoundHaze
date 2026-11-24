@@ -25,9 +25,9 @@ const DisplayAlbumInfo = () => {
 
     const playSongBtn = useCallback(
         (song) => {
-            dispatch(playSong(song));
+            dispatch(playSong(song, album?.Songs, album?.Artist?.username));
         },
-        [dispatch]
+        [dispatch, album]
     );
 
     const checkValidation = (album) => {

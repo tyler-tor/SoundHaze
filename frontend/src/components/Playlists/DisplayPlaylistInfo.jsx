@@ -22,9 +22,9 @@ function DisplayPlaylistInfo() {
 
     const playSongBtn = useCallback(
         (song) => {
-            dispatch(playSong(song));
+            dispatch(playSong(song, playlist?.Songs));
         },
-        [dispatch]
+        [dispatch, playlist]
     );
 
     const checkValidation = (playlist) => {

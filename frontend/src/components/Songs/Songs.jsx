@@ -23,8 +23,8 @@ const Songs = () => {
     }, [dispatch]);
 
     const playSongBtn = useCallback(
-        (song) => {
-            dispatch(playSong(song));
+        (song, list) => {
+            dispatch(playSong(song, list));
         },
         [dispatch]
     );
@@ -81,7 +81,7 @@ const Songs = () => {
                                 <HiPlay className="play-btn"
                                     onClick={(e) => {
                                         e.preventDefault();
-                                        playSongBtn(song);
+                                        playSongBtn(song, songs);
                                     }}
                                 />
                             </div>

@@ -554,3 +554,14 @@ _New item (not in the original plan), done first at Tyler's request._
 - **Files:** `backend/awsS3.js`, `backend/package.json` (+ lock), `frontend/public/images/*`, `frontend/src/components/HomePage/homepage.css`, cover `<img>` tags in Songs/Albums/Playlists/HomePage components
 - **How to verify** (verified): `optimizeImage` run directly on a generated 15 MB PNG (output metadata: webp 600x400); fake PNG posted to `/api/images/upload` gives 400; `npm run build` passes and emits `studio-*.webp`. **Not verified:** a real S3 upload (no AWS credentials here).
 - **Things to watch:** `sharp` ships a native binary per platform (installed automatically by `npm ci`; the Docker image in S39 must be Linux, not copied from a Mac). `width`/`height` attributes were left for the S35 redesign, which introduces one shared `Cover` image component (see Batch 3 deviations).
+
+## S28 — Audio player efficiency
+- **Problem:** the player logged every play/pause event object to the console, preloaded whatever the browser decided, showed only a song title, and could not go to the next song.
+- **What changed:**
+  - Removed the `console.log` handlers; `preload="metadata"` (only the length is downloaded until you press play); `autoPlay={false}` (nothing plays on first render; choosing a song still starts it).
+  - The player header shows the cover image, song title and (when known) the artist name.
+  - Simple queue in `store/player.js`: state is now `{ song, queue, index }`. `playSong(song, list, artistName)` makes `list` the queue; new `playNext()` / `playPrevious()`. Next/Previous buttons appear when the queue has more than one song, and a song that finishes moves on to the next one. Songs, Album and Playlist pages pass their list. The artist name is passed on the album page only (a playlist mixes artists).
+  - `react-h5-audio-player` 3.8.6 -> 3.10.2.
+- **Files:** `frontend/src/store/player.js`, `components/Player/Player.jsx` + `Player.css`, `Songs.jsx`, `DisplayAlbumInfo.jsx`, `DisplayPlaylistInfo.jsx`, `frontend/package.json` (+ lock)
+- **How to verify** (verified): jsdom on the album page: 13 play buttons; click play on the first -> `{index: 0, queue: 13, song: "My Way"}`, header shows title and artist; the Skip button moves to "Oracle"; `<audio preload="metadata">`; no console errors or warnings. Real audio playback cannot be tested without a browser.
+- **Things to watch:** the artist name is missing in the player when a song is started from the Songs page or a playlist (those lists only have the user id). A later change could add the artist to the song list API.
