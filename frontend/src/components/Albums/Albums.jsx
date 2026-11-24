@@ -44,7 +44,7 @@ const Albums = () => {
                             className="album-container"
                             key={album.id}>
                             <div className="ind-album-info">
-                                <img src={album.previewImage} alt={album.name}
+                                <img loading="lazy" decoding="async" src={album.previewImage} alt={album.name}
                                     className='album-img' />
                                 <NavLink to={`/albums/${album.id}`}
                                     className='album-titles'>

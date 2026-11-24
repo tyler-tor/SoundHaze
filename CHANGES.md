@@ -43,6 +43,7 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 
 - **S25 (plan said "depends on S37"):** S37 (Postgres-safe seeds) is not in this batch. The migration dedupes join rows itself, so it does not need it.
 - **S26 (/api/my/library):** the plan marks the combined library endpoint as optional. Not done: it would change three store thunks and the Home page for a small saving on three small requests.
+- **S27 (width/height):** the plan asks for `width`/`height` on every cover `<img>`. Done in S35 through one shared `Cover` component instead of editing every old component twice (they are rewritten there). `sharp` resizing (optional in the plan) **was** done.
 
 ## Open questions for Tyler
 
@@ -543,3 +544,13 @@ _New item (not in the original plan), done first at Tyler's request._
 - **Files:** `frontend/src/components/Songs/DisplaySongInfo.jsx`, `backend/routes/api/songs.js`, `album.js`, `artist.js`
 - **How to verify** (verified): response bodies of `/api/songs/1`, `/api/albums/1`, `/api/artists/2` were saved before and after and are identical; a missing song still returns 404; `npm run build` passes.
 - **Things to watch:** the optional "combine playlists/albums/songs into one `/api/my/library`" idea was **not** done (see Batch 3 deviations).
+
+## S27 — Optimize images
+- **Problem:** the welcome-page photo was a 53 KB JPEG, a second 280 KB background JPEG was not used by anything, cover images loaded eagerly, and uploads were stored exactly as sent (a phone photo can be several MB, shown at 200 px).
+- **What changed:**
+  - `studio.jpg` converted to `studio.webp` (53 KB -> 18 KB); `homepage.css` points to it. `studiobackground.jpg` (280 KB) was referenced nowhere, so it was deleted instead of converted.
+  - Cover-art `<img>` tags got `loading="lazy"` and `decoding="async"` (not the avatar in the nav or the upload preview, which are on screen at once).
+  - Server-side resize with `sharp` (new backend dependency): every uploaded image (album/playlist cover, signup avatar) is rotated by its EXIF tag, shrunk to at most 600 px on the longest side (never enlarged) and stored as WebP at quality 80. A test 3000x2000 noise PNG of 15.3 MB became a 68 KB 600x400 WebP. A file that claims to be an image but is not returns `400 "That file is not a valid image."`. Audio uploads are untouched.
+- **Files:** `backend/awsS3.js`, `backend/package.json` (+ lock), `frontend/public/images/*`, `frontend/src/components/HomePage/homepage.css`, cover `<img>` tags in Songs/Albums/Playlists/HomePage components
+- **How to verify** (verified): `optimizeImage` run directly on a generated 15 MB PNG (output metadata: webp 600x400); fake PNG posted to `/api/images/upload` gives 400; `npm run build` passes and emits `studio-*.webp`. **Not verified:** a real S3 upload (no AWS credentials here).
+- **Things to watch:** `sharp` ships a native binary per platform (installed automatically by `npm ci`; the Docker image in S39 must be Linux, not copied from a Mac). `width`/`height` attributes were left for the S35 redesign, which introduces one shared `Cover` image component (see Batch 3 deviations).

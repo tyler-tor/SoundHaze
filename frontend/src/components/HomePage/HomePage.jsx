@@ -25,7 +25,7 @@ const HomePage = () => {
             <div className="homepage">
                 <div className="user-profile-infobox-actions">
                     <div className="user-propic-wrapper">
-                        <img className="user-profile-pic" src={currentUser.previewImage} alt="user pic" />
+                        <img loading="lazy" decoding="async" className="user-profile-pic" src={currentUser.previewImage} alt="user pic" />
                     </div>
                     <div className="user-info-wrapper">
                         <ul className="user-info-list">
@@ -61,7 +61,7 @@ const HomePage = () => {
                     <div className="section-tiles">
                         {playlists.map((playlist, ind) => (
                             <div className="tile-wrapper" key={ind}>
-                                <img className="tile-image" src={playlist.previewImage} alt="playlist cover" />
+                                <img loading="lazy" decoding="async" className="tile-image" src={playlist.previewImage} alt="playlist cover" />
                                 <NavLink to={`/playlists/${playlist.id}`} className="tile-title">
                                     {playlist.name.length < 10 ? playlist.name : `${playlist.name.slice(0, 7)}...`}
                                 </NavLink>
@@ -79,7 +79,7 @@ const HomePage = () => {
                     <div className="section-tiles">
                         {albums.map((album, ind) => (
                             <div className="tile-wrapper" key={ind}>
-                                <img className="tile-image" src={album.previewImage} alt="album cover" />
+                                <img loading="lazy" decoding="async" className="tile-image" src={album.previewImage} alt="album cover" />
                                 <NavLink to={`/albums/${album.id}`} className="tile-title">
                                     {album.title.length < 10 ? album.title : `${album.title.slice(0, 7)}...`}
                                 </NavLink>
@@ -97,7 +97,7 @@ const HomePage = () => {
                         {songs.map((song, ind) => (
                             <div className="tile-wrapper"
                                 key={ind}>
-                                    <img className="tile-image" src={song.previewImage} alt="song cover" />
+                                    <img loading="lazy" decoding="async" className="tile-image" src={song.previewImage} alt="song cover" />
                                 <NavLink to={`/albums/${song.albumId}`} className="tile-title">
                                     {song.title.length < 10 ? song.title : `${song.title.slice(0, 7)}...`}
                                 </NavLink>

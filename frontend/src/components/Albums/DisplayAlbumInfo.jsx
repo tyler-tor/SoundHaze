@@ -72,13 +72,13 @@ const DisplayAlbumInfo = () => {
                 className="ind-album-wrapper">
                 <div className="ind-ai-wrapper">
                     <div className="ai-pic-wrapper">
-                        <img src={album.previewImage} alt={album.title} className='ai-pic' />
+                        <img loading="lazy" decoding="async" src={album.previewImage} alt={album.title} className='ai-pic' />
                     </div>
                     <div className="ai-detail-btns">
                         <h1 className="ind-album-title">{album.title}</h1>
                         <div className="ind-ai-list">
                             <div className="ind-ai-item">
-                                <img className='ind-ai-pro-pic' src={album.Artist.previewImage} alt={album.Artist.username} />
+                                <img loading="lazy" decoding="async" className='ind-ai-pro-pic' src={album.Artist.previewImage} alt={album.Artist.username} />
                             </div>
                             <strong className="ind-ai-item">
                                 {album.Artist.username}
@@ -93,7 +93,7 @@ const DisplayAlbumInfo = () => {
                             <div className="ia-song-container"
                             key={song.id}>
                                 <div className="ia-song-info">
-                                <img src={album.previewImage}
+                                <img loading="lazy" decoding="async" src={album.previewImage}
                                 className='song-img'>
                                 </img>
                                 <strong className='song-titles'>

@@ -3,6 +3,7 @@ const { Upload } = require("@aws-sdk/lib-storage");
 const crypto = require("crypto");
 const path = require("path");
 const multer = require("multer");
+const sharp = require("sharp");
 const { s3: s3Config } = require("./config");
 
 // AWS SDK v3. Settings come from env vars (see config/index.js):
@@ -55,12 +56,34 @@ const prefixFor = (mimetype = "") =>
 const makeKey = (originalname, mimetype) =>
   `${prefixFor(mimetype)}/${crypto.randomUUID()}${path.extname(originalname || "").toLowerCase()}`;
 
+// Cover art and avatars are shown at 200-300 px, so a 5 MB phone photo is a
+// huge waste. Images are shrunk to at most 600 px on the longest side, rotated
+// by their EXIF orientation, and stored as WebP (S27). Audio is untouched.
+const IMAGE_MAX_PX = 600;
+const optimizeImage = async (file) => {
+  const buffer = await sharp(file.buffer)
+    .rotate()
+    .resize(IMAGE_MAX_PX, IMAGE_MAX_PX, { fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 80 })
+    .toBuffer();
+  return { originalname: "image.webp", mimetype: "image/webp", buffer };
+};
+
 // No `ACL: "public-read"`: new S3 buckets enforce "bucket owner" object
 // ownership and REJECT uploads that set an ACL. Public reads should come
 // from a bucket policy / CloudFront instead (S43).
 const uploadToS3 = async (file) => {
   if (!file) throw httpError(400, "A file is required.");
-  const { originalname, mimetype, buffer } = file;
+  let upload = file;
+  if (file.mimetype && file.mimetype.startsWith("image/")) {
+    try {
+      upload = await optimizeImage(file);
+    } catch {
+      // The MIME type came from the browser; the bytes are not a real image.
+      throw httpError(400, "That file is not a valid image.");
+    }
+  }
+  const { originalname, mimetype, buffer } = upload;
   const key = makeKey(originalname, mimetype);
   // lib-storage's Upload switches to a multipart upload for large files.
   await new Upload({
@@ -133,6 +156,7 @@ module.exports = {
   s3,
   UPLOAD_RULES,
   publicUrlFor,
+  optimizeImage,
   singlePublicFileUpload,
   multiplePublicFileUpload,
   singleMulterUpload,

@@ -63,7 +63,7 @@ const Songs = () => {
                             className="song-container"
                             key={song.id}>
                             <div className="ind-song-info">
-                                <img src={song.previewImage}
+                                <img loading="lazy" decoding="async" src={song.previewImage}
                                     className='song-img'>
                                 </img>
                                 <NavLink to={`/albums/${song.albumId}`} className='song-titles'>

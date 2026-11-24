@@ -41,7 +41,7 @@
 }
 
 .welcome-page {
-    background-image: url('../../../public/images/studio.jpg');
+    background-image: url('../../../public/images/studio.webp');
     display: flex;
     flex-direction: column;
     align-items: center;

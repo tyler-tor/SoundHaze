@@ -43,7 +43,7 @@ function DisplayPlaylistInfo() {
             <div className="ind-playlist-wrapper">
                 <div className="ind-pi-wrapper">
                     <div className="pi-pic-wrapper">
-                        <img src={playlist.previewImage}
+                        <img loading="lazy" decoding="async" src={playlist.previewImage}
                         alt={playlist.name} className='pi-pic' />
                     </div>
                     <div className="pi-detail-btns">
@@ -67,7 +67,7 @@ function DisplayPlaylistInfo() {
                         return (
                             <div className="ip-song-container" key={song.id}>
                                 <div className="ip-song-info">
-                                    <img src={song.previewImage}
+                                    <img loading="lazy" decoding="async" src={song.previewImage}
                                     className='song-img' alt={playlist.name} />
                                     <strong className="song-titles">
                                         {song.title}

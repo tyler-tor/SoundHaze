@@ -42,7 +42,7 @@ function Playlists() {
                         <div className='playlist-container'
                             key={playlist.id}>
                             <div className='ind-playlist-info'>
-                                <img src={playlist.previewImage} alt={playlist.name}
+                                <img loading="lazy" decoding="async" src={playlist.previewImage} alt={playlist.name}
                                     className='playlist-img' />
                                 <NavLink to={`/playlists/${playlist.id}`}
                                     className='playlist-titles'
