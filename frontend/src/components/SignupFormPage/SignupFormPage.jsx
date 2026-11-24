@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import { signUpUser } from '../../store/session';
+import { getErrorMessages } from '../../store/csrf';
 // import ImageComponent from '../ImageComponent';
 import './SignupForm.css'
 
@@ -46,19 +47,15 @@ const SignupFormPage = () => {
                 lastName,
                 image
             };
-            // console.log(newUserInfo);
-            await dispatch(signUpUser(newUserInfo))
-                .catch(async res => {
-                    const data = await res.json();
-                    data.errors && setErrors(data.errors);
-                })
-
-            setUsername('');
-            setEmail('');
-            setPassword('');
-            setConfirmPassword('');
-            setFirstName('');
-            setLastName('');
+            setErrors([]);
+            try {
+                // On success the user is set and this page redirects to Home.
+                await dispatch(signUpUser(newUserInfo));
+            } catch (res) {
+                // Keep what the person typed so they can fix it and retry
+                // (the old code cleared every field even when signup failed).
+                setErrors(await getErrorMessages(res));
+            }
         }
     };
 

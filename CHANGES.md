@@ -614,3 +614,17 @@ _New item (not in the original plan), done first at Tyler's request._
 - **Files:** `frontend/src/store/session.js`, `frontend/src/store/songs.js`
 - **How to verify** (verified, jsdom against the real backend with S3 uploads stubbed): log in as the demo user, create an album and a playlist through the modals: the session lists grew (4 -> 5 and 5 -> 6), the Home page showed both with no reload, the Create Song dropdown listed the new album, the "+ to Playlist" dropdown listed the new playlist, creating a song put it in the song lists, and deleting the album removed it and its songs from all lists. Before the change the same script printed "home shows new album/playlist: false false".
 - **Things to watch:** items created by *other* users are still only seen after a page load (there is no live updating).
+
+## X2 — Show server errors instead of swallowing them
+- **Problem:** several places ignored failures or lied about them: adding a song to a playlist twice did nothing visible, Delete Song said "Successfully deleted!" even when the server refused, the Demo button did nothing if login failed, signup cleared every field even when it failed, a failed image upload just stopped the "Uploading..." text, and the Create Song button opened its modal right after saying "You do not have access".
+- **What changed:** each of these now catches the error and shows the server's own message (via `getErrorMessages`):
+  - `AddSong` (the "+ to Playlist" modal): error list inside the modal, which stays open (e.g. "That song is already in this playlist."); also asks you to pick a playlist first.
+  - `DeletePlaylistSong`: errors inside the confirm modal; the modal only closes on success.
+  - `DeleteSong`: waits for the server; success message only on success, otherwise the server's reason in an alert (same style as Delete Album).
+  - `DemoUser`: alerts the reason if login fails; the demo credentials are one constant.
+  - `LoginForm` and `SignupFormPage`: use `getErrorMessages` (the old code called `res.json()` on whatever was thrown, which crashes on network errors); signup keeps what you typed when it fails.
+  - `ImageComponent`: shows upload errors (too large, wrong type, no file chosen).
+  - `CreateSongModal`: after the "no access" alert it returns and does not open the modal (the old code always called `setShowModal(true)` afterwards).
+- **Files:** `components/Playlists/AddSong.jsx`, `DeletePlaylistSong.jsx`, `components/Songs/DeleteSong.jsx`, `components/DemoUser/DemoUser.jsx`, `components/LoginFormModal/LoginForm.jsx`, `components/SignupFormPage/SignupFormPage.jsx`, `components/ImageComponent/ImageComponent.jsx`, `components/CreateSong/CreateSongModal.jsx`
+- **How to verify** (verified, jsdom + real backend, development build): wrong password -> "The provided credentials were invalid" in the login modal; duplicate-username signup -> "Username or email already taken." and the typed username is still there; adding a song to a playlist twice -> "That song is already in this playlist." and the modal stays open; Upload with no file -> "Choose an image file first."; deleting an already deleted song -> alert "Song couldn't be found." (no "Successfully deleted"). 0 console errors. **Not tested:** the non-owner Create Song branch (the button only renders for album owners today, so it is a guard).
+- **Things to watch:** alerts are still `window.alert`; S33 replaces them with toasts.

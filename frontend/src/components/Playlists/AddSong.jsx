@@ -1,31 +1,47 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-// import { useNavigate } from 'react-router-dom';
 import { addSongToPlaylist } from '../../store/playlistSongs';
+import { getErrorMessages } from '../../store/csrf';
 import './Playlists.css'
 
 
-function AddSong({songId, setShowModal}) {
+function AddSong({ songId, setShowModal }) {
   const dispatch = useDispatch();
-  // const navigate = useNavigate();
   const [playlistId, setPlaylistId] = useState('');
+  const [errors, setErrors] = useState([]);
 
   const myPlaylists = useSelector((state) => state.session.playlists);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrors([]);
+
+    if (!playlistId) {
+      return setErrors(['Choose a playlist first. You can create one from the Playlists page.']);
+    }
 
     const data = {
       songId,
       playlistId: parseInt(playlistId)
     }
-    await dispatch(addSongToPlaylist(data)).then(() => setShowModal(false))
+    try {
+      await dispatch(addSongToPlaylist(data));
+      setShowModal(false);
+    } catch (response) {
+      // For example: "That song is already in this playlist." (409)
+      setErrors(await getErrorMessages(response));
+    }
   }
 
   return myPlaylists && (
     <form
     onSubmit={handleSubmit}
     className='add-song-playlist-form'>
+      <ul className='error-list' role='alert'>
+        {errors.map((error, idx) => (
+          <li key={idx}>{error}</li>
+        ))}
+      </ul>
       <label>
         Playlists
         <select
@@ -34,8 +50,8 @@ function AddSong({songId, setShowModal}) {
         onChange={(e) => setPlaylistId(e.target.value)}
         className='select-input'>
           <option value=''>Select Playlist</option>
-          {Object.values(myPlaylists).map((playlist, ind) => (
-            <option key={ind}
+          {Object.values(myPlaylists).map((playlist) => (
+            <option key={playlist.id}
             value={playlist.id}
             >{playlist.name}</option>
           ))}

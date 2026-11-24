@@ -1,14 +1,20 @@
 import { useDispatch } from "react-redux";
-import { removeSong} from "../../store/songs";
+import { removeSong } from "../../store/songs";
+import { getErrorMessages } from "../../store/csrf";
 
 const DeleteSong = ({song, userId}) => {
     const dispatch = useDispatch();
 
-    const handleClick = (e) => {
+    const handleClick = async (e) => {
         e.preventDefault();
         if(song.userId === userId){
-            dispatch(removeSong(song.id));
-            window.alert('Successfully deleted! Now create another!');
+            try {
+                await dispatch(removeSong(song.id));
+                window.alert('Successfully deleted! Now create another!');
+            } catch (response) {
+                // Show the server's reason instead of claiming success.
+                window.alert((await getErrorMessages(response)).join('\n'));
+            }
         }else {
             window.alert('You do not have access to delete/modify this song');
         }

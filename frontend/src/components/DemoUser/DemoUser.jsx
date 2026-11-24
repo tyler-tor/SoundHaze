@@ -1,19 +1,20 @@
-import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { loginUser } from '../../store/session';
+import { getErrorMessages } from '../../store/csrf';
+
+// Demo account (seeded by backend/db/seed-data.js).
+const DEMO_CREDENTIALS = { credential: 'Demo-lition', password: 'password' };
 
 const DemoUser = () => {
-    const [credential] = useState('Demo-lition');
-    const [password] = useState('password');
     const dispatch = useDispatch();
 
-    const handleClick = (e) => {
+    const handleClick = async (e) => {
         e.preventDefault();
-        const user = {
-            credential,
-            password
+        try {
+            await dispatch(loginUser(DEMO_CREDENTIALS));
+        } catch (response) {
+            window.alert((await getErrorMessages(response)).join('\n'));
         }
-        dispatch(loginUser(user))
     }
 
     return (

@@ -7,14 +7,13 @@ const CreateSongModal = ({album, userId}) => {
 
     const handleClick = (e) => {
         e.preventDefault();
-        if(album){
-            if(album.userId === userId){
-                setShowModal(true)
-            }else {
-                window.alert('You do not have access to add a song');
-            }
+        // Only the owner of an album may add songs to it. Say so and stop;
+        // the modal must not open after the alert.
+        if (album && album.userId !== userId) {
+            window.alert('You do not have access to add a song');
+            return;
         }
-        setShowModal(true)
+        setShowModal(true);
     }
 
     return (
