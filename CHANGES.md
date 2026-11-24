@@ -39,6 +39,10 @@ Each section matches one plan item (S1, S2, ...) and one git commit on the `mode
 - **S24 (scope):** only the required part was done: `configureStore` replaces `createStore` + thunk + logger. Converting each `store/*.js` file to `createSlice` (optional, "one file per follow-up commit" in the plan) and moving to React 19 (optional) were **not** done, to keep one commit per item and avoid an unverified React 19 jump (`react-h5-audio-player` compatibility is untested). `react-redux` was upgraded 8 → 9 (the version made for RTK 2 / Redux 5).
 - **S24 (extra fix):** the albums reducer's `SHOW_ALBUM` case mutated the previous state (and crashed if `currentAlbum` was `null`). RTK's development check throws on mutations, so it was fixed in the same commit.
 
+### Batch 3 deviations
+
+- **S25 (plan said "depends on S37"):** S37 (Postgres-safe seeds) is not in this batch. The migration dedupes join rows itself, so it does not need it.
+
 ## Open questions for Tyler
 
 1. **`GET /api/playlists` is now public (S2).** I treated the `/playlists` page as a public "browse all playlists" page, like `/albums`. If you meant it to show only *your* playlists, say so and it can call `GET /api/my/playlists` instead.
@@ -512,3 +516,19 @@ _New item (not in the original plan), done first at Tyler's request._
   - Action logs no longer print in the browser console (redux-logger is gone). Install the **Redux DevTools** browser extension to see actions and state.
   - If a future reducer mutates state, the dev server will throw "A state mutation was detected..."; that is RTK catching a real bug.
   - Next steps (not done): convert the store files to `createSlice` one at a time, then move to React 19.
+
+---
+
+# Batch 3: performance, UI/UX, extras (S25 to S35, X1 to X5)
+
+## S25 — Add database indexes and a uniqueness rule
+- **Problem:** Postgres does not index foreign keys, so "songs by user", "songs in an album" or "comments on a song" scanned whole tables. Nothing stopped the same song being added to a playlist twice.
+- **What changed:**
+  - New migration `20261124000000-add-indexes.js`: indexes on `Songs.userId`, `Songs.albumId`, `Albums.userId`, `Playlists.userId`, `Comments.songId`, `Comments.userId`, and a **unique** index on `PlaylistSongs(playlistId, songId)`. It works with the production schema (`SCHEMA`).
+  - Before creating the unique index the migration deletes duplicate join rows (keeps the oldest of each pair). On a database without duplicates it deletes nothing. This is the only data change and it only touches join rows, never songs or playlists.
+  - `PlaylistSong` model declares the same unique index.
+  - `POST /api/playlists/:id/songs` now answers `409 "That song is already in this playlist."` for a duplicate instead of a 500.
+  - The migration's `down()` only drops indexes, so unlike the table migrations it is allowed in production (no data is lost).
+- **Files:** `backend/db/migrations/20261124000000-add-indexes.js`, `backend/db/models/playlistsong.js`, `backend/routes/api/playlist.js`
+- **How to verify** (verified): inserted 2 duplicate join rows in the SQLite dev DB (151 -> 153 rows), ran `npm run db:migrate` (back to 151 rows, 7 indexes present); a further duplicate insert fails with `UNIQUE constraint failed`; `db:migrate:undo` removes all 7 indexes and re-running migrate restores them. API: adding song 99 to a playlist twice returns 200 then 409. Not run against Postgres (not available here); the SQL is plain and quotes the schema name.
+- **Things to watch:** on Postgres, `CREATE INDEX` locks writes to the table briefly; these tables are tiny. Run `db:migrate` as usual on deploy.

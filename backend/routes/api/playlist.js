@@ -87,10 +87,17 @@ router.post('/:playlistId/songs', requireAuth, validatePlaylistSong, async (req,
     const song = await Song.findByPk(songId);
 
     if (playlist && song) {
-        const newPlaylistSong = await PlaylistSong.create({
-            playlistId: playlist.id,
-            songId: song.id
+        // The (playlistId, songId) pair is unique (S25): a duplicate is a clear 409, not a 500.
+        const [newPlaylistSong, created] = await PlaylistSong.findOrCreate({
+            where: { playlistId: playlist.id, songId: song.id }
         });
+        if (!created) {
+            const err = new Error('That song is already in this playlist.');
+            err.title = 'Conflict';
+            err.errors = [err.message];
+            err.status = 409;
+            return next(err);
+        }
 
         const playlistSong = await PlaylistSong.scope('addSongs').findOne({
             where: {

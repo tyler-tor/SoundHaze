@@ -31,6 +31,8 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'PlaylistSong',
+    // Matches the unique index created by the add-indexes migration (S25).
+    indexes: [{ unique: true, fields: ['playlistId', 'songId'] }],
     scopes: {
       addSongs: {
         attributes: {
