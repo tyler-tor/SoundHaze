@@ -13,7 +13,7 @@ function AddSongModal({songId}) {
     <div>
       <button onClick={handleClick} className="btn btn-ghost btn-sm">+ to Playlist</button>
       {showModal && (
-        <Modal onClose={() => setShowModal(false)}>
+        <Modal onClose={() => setShowModal(false)} title="Add to a playlist">
           <AddSong songId={songId} setShowModal={setShowModal} />
         </Modal>
       )}

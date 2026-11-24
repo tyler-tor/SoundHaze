@@ -9,7 +9,7 @@ function CreatePlaylistModal() {
         <>
             <button onClick={() => setShowModal(true)} className="btn btn-primary">Create Playlist</button>
             {showModal && (
-                <Modal onClose={() => setShowModal(false)}>
+                <Modal onClose={() => setShowModal(false)} title="Create a playlist">
                     <CreatePlaylist setShowModal={setShowModal} />
                 </Modal>
             )}

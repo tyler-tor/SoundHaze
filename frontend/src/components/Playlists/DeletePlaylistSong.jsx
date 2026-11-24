@@ -22,8 +22,8 @@ function DeletePlaylistSong({ songId, playlistId, setShowModal }) {
     }
 
     return (
-        <div className='confirm-delete-form'>
-            <h2>Are you sure you want to remove this song?</h2>
+        <div className='form'>
+            <p>Remove this song from the playlist? The song itself is not deleted.</p>
             <ul className='error-list' role='alert'>
                 {errors.map((error, idx) => (
                     <li key={idx}>{error}</li>

@@ -21,7 +21,7 @@ const CreateSongModal = ({album, userId, className = 'btn btn-primary'}) => {
             <button type="button" onClick={handleClick}
             className={className}>Create Song</button>
             {showModal && (
-                <Modal onClose={() => setShowModal(false)}>
+                <Modal onClose={() => setShowModal(false)} title="Add a song">
                     <CreateSong albumId={album ? album.id : ''}
                     setShowModal={setShowModal} />
                 </Modal>

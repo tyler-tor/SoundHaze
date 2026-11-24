@@ -668,3 +668,15 @@ _Done before S30-S34 on purpose (the plan says S30 is easier after S35): the new
 - **Files:** `components/Navigation/{Navigation.jsx,Navigation.css}`, `components/Player/Player.css`, `styles/{base,pages}.css`, `components/HomePage/homepage.css`, `context/Modal.css`
 - **How to verify** (verified: markup only): jsdom shows both navigation landmarks ("Main" and "Mobile", 4 links each; CSS shows one at a time) and the tours still pass with 0 errors. **Not verified:** the actual layout at 375px (no browser). In a browser: DevTools device mode at 375x667 and 768x1024; check the tab bar, the two-column grid, the player bar, a modal, and that nothing scrolls sideways.
 - **Things to watch:** the tab bar is shown to logged-out visitors as well (the pages are public).
+
+## S31 — Accessible modals
+- **Problem:** the login, create, edit and remove dialogs were plain `<div>`s: screen readers did not know they were dialogs, Escape did nothing, Tab could wander into the page behind, and focus was not returned to the button that opened them.
+- **What changed:** `context/Modal.jsx` was rewritten (React portal kept; native `<dialog>` was not used because jsdom, which the tours run in, does not implement it, and the manual version behaves the same):
+  - `role="dialog"`, `aria-modal="true"`, `aria-labelledby` pointing at a visible title (new `title` prop; every modal got one, e.g. "Log in", "Create an album", "Add to a playlist", "Edit song").
+  - Escape, the new **Close** (X) button, and a click on the dim background close it.
+  - On open, focus moves to the first field (or the Close button); Tab and Shift+Tab loop inside the dialog; the page behind gets the `inert` attribute (not focusable, hidden from screen readers) and does not scroll.
+  - On close, focus returns to the element that opened it (if it is still on the page) and `inert`/scroll lock are removed.
+  - The remove-song confirmation lost its own heading (the modal title is the heading now).
+- **Files:** `frontend/src/context/Modal.jsx`, `Modal.css`, the nine `*Modal.jsx` components, `components/Playlists/DeletePlaylistSong.jsx`
+- **How to verify** (verified in jsdom): opening Log in -> `role=dialog`, `aria-modal=true`, labelled "Log in"; focus lands in the first input; `inert` set on 6 siblings; body scroll locked; Tab from the last control goes to the first and Shift+Tab from the first goes to the last; Escape closes, focus returns to the Log in button, `inert` and scroll lock are removed; Close button does the same. The create/edit flows from X1/X2 still pass. **Not tested:** a real screen reader. Quick manual check: Tab through a modal and press Escape.
+- **Things to watch:** `inert` is supported by all current browsers (Chrome 102+, Firefox 112+, Safari 15.5+).

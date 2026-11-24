@@ -17,7 +17,7 @@ function DeletePlaylistSongModal({ songId, playlistId }) {
                 Remove from Playlist
             </button>
             {showModal && (
-                <Modal onClose={() => setShowModal(false)}>
+                <Modal onClose={() => setShowModal(false)} title="Remove from playlist">
                     <DeletePlaylistSong songId={songId} playlistId={playlistId} setShowModal={setShowModal} />
                 </Modal>
             )}

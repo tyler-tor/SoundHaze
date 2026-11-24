@@ -18,7 +18,7 @@ function UpdatePlaylistModal({ playlist, userId }) {
         <>
             <button onClick={handleClick} className="btn btn-ghost btn-sm">Update Playlist</button>
             {showModal && (
-                <Modal onClose={() => setShowModal(false)}>
+                <Modal onClose={() => setShowModal(false)} title="Edit playlist">
                     <UpdatePlaylist playlist={playlist} setShowModal={setShowModal} />
                 </Modal>
             )}
