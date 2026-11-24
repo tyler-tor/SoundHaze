@@ -5,55 +5,47 @@ import { getPlaylists } from '../../store/playlists';
 import CreatePlaylistModal from '../CreatePlaylist/CreatePlaylistModal';
 import DeletePlaylist from './DeletePlaylist';
 import UpdatePlaylistModal from './UpdatePlaylistModal';
-// import AddSongModal from './AddSongModal'
-import './Playlists.css';
+import { Cover, usePageTitle } from '../common';
+import '../../styles/pages.css';
 
 function Playlists() {
     const playlists = Object.values(useSelector(state => state.playlists.playlists)).reverse();
     const user = useSelector(state => state.session.user);
     const dispatch = useDispatch();
+    usePageTitle('Playlists');
 
     useEffect(() => {
         dispatch(getPlaylists());
     }, [dispatch]);
 
-    if (!playlists) {
-        return null;
-    };
-
-    const checkValidation = (playlist) => {
-        if (user?.id === playlist.userId) {
-            return (
-                <div className='ind-playlist-actions'>
-                    {/* <AddSongModal playlist={playlist} userId={user?.id} /> */}
-                    <UpdatePlaylistModal playlist={playlist} userId={user?.id} />
-                    <DeletePlaylist playlist={playlist} userId={user?.id} />
+    return (
+        <div className='page'>
+            <div className='page-header'>
+                <div>
+                    <h1>Playlists</h1>
+                    <p className='lede'>Hand-picked mixes from everyone on SoundHaze.</p>
                 </div>
-            )
-        }
-    }
-
-    return playlists && (
-        <div className='cp-div' >
-            <div className='entire-playlists-container'>
                 {user && <CreatePlaylistModal />}
-                {playlists && playlists.map(playlist => {
-                    return (
-                        <div className='playlist-container'
-                            key={playlist.id}>
-                            <div className='ind-playlist-info'>
-                                <img loading="lazy" decoding="async" src={playlist.previewImage} alt={playlist.name}
-                                    className='playlist-img' />
-                                <NavLink to={`/playlists/${playlist.id}`}
-                                    className='playlist-titles'
-                                >
-                                    {playlist.name}
-                                </NavLink>
-                            </div>
-                            {user && checkValidation(playlist)}
+            </div>
+            <div className='grid'>
+                {playlists.map(playlist => (
+                    <article className='tile' key={playlist.id}>
+                        <NavLink to={`/playlists/${playlist.id}`} className='tile-cover' tabIndex={-1} aria-hidden='true'>
+                            <Cover src={playlist.previewImage} label={playlist.name} />
+                        </NavLink>
+                        <div>
+                            <NavLink to={`/playlists/${playlist.id}`} className='tile-title' title={playlist.name}>
+                                {playlist.name}
+                            </NavLink>
                         </div>
-                    )
-                })}
+                        {user?.id === playlist.userId && (
+                            <div className='tile-actions'>
+                                <UpdatePlaylistModal playlist={playlist} userId={user.id} />
+                                <DeletePlaylist playlist={playlist} userId={user.id} />
+                            </div>
+                        )}
+                    </article>
+                ))}
             </div>
         </div>
     )

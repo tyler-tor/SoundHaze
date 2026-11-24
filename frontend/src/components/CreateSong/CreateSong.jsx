@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useDispatch, useSelector} from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { createAddSong } from "../../store/songs";
-import './createsong.css';
 import { getErrorMessages } from "../../store/csrf";
 
 const CreateSong = ({ albumId, setShowModal }) => {
@@ -49,14 +48,14 @@ const CreateSong = ({ albumId, setShowModal }) => {
     return (
         <form
             onSubmit={handleSubmit}
-            className="create-song-form">
-            <ul className="error-list">
+            className="form">
+            <ul className="error-list" role="alert">
                 {errors.map((error, idx) => (
                     <li key={idx}
                         className='el-item'>{error}</li>
                 ))}
             </ul>
-            <label>
+            <label className="field">
                 Title
                 <input
                     type="text"
@@ -65,7 +64,7 @@ const CreateSong = ({ albumId, setShowModal }) => {
                     required
                 />
             </label>
-            <label>
+            <label className="field">
                 Description
                 <input
                     type="text"
@@ -74,7 +73,7 @@ const CreateSong = ({ albumId, setShowModal }) => {
                     required
                 />
             </label>
-            <label>
+            <label className="field">
                     Upload Audio
                 <input
                     type="file"
@@ -86,7 +85,7 @@ const CreateSong = ({ albumId, setShowModal }) => {
                 />
             </label>
             {!albumId &&
-                (<label>
+                (<label className="field">
                     Album
                     <select
                         name="album"
@@ -103,7 +102,7 @@ const CreateSong = ({ albumId, setShowModal }) => {
                 </label>)}
             <button
                 type="submit"
-                className="create-song-btn">
+                className="btn btn-primary">
                 Add Song
             </button>
         </form>

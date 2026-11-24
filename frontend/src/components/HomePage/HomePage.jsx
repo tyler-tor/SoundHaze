@@ -1,128 +1,137 @@
 import { useSelector, useDispatch } from "react-redux";
 import CreateAlbumModal from "../CreateAlbum/CreateAlbumModal";
 import CreatePlaylistModal from "../CreatePlaylist/CreatePlaylistModal";
-import { NavLink } from "react-router-dom";
+import DemoUser from "../DemoUser/DemoUser";
+import LoginFormModal from "../LoginFormModal/LoginFormModal";
+import { Link, NavLink } from "react-router-dom";
 import { useEffect } from "react";
 import { mySongs } from "../../store/session";
+import { getAlbums } from "../../store/albums";
+import { Cover, usePageTitle } from "../common";
 import './homepage.css'
 
+// A row of cards: one per album / playlist / song.
+const TileGrid = ({ items, getTo, getTitle, getImage }) => (
+    <div className="grid">
+        {items.map((item) => (
+            <article className="tile" key={item.id}>
+                <NavLink to={getTo(item)} className="tile-cover" tabIndex={-1} aria-hidden="true">
+                    <Cover src={getImage(item)} label={getTitle(item)} />
+                </NavLink>
+                <NavLink to={getTo(item)} className="tile-title" title={getTitle(item)}>
+                    {getTitle(item)}
+                </NavLink>
+            </article>
+        ))}
+    </div>
+);
 
-const HomePage = () => {
-    const currentUser = useSelector(state => state.session.user);
+const Welcome = () => {
+    const albums = Object.values(useSelector(state => state.albums.albums)).reverse();
+    const dispatch = useDispatch();
+    usePageTitle('');
+
+    useEffect(() => {
+        dispatch(getAlbums());
+    }, [dispatch]);
+
+    // The blurred covers behind the headline are the "haze".
+    const hazeCovers = albums.slice(0, 3);
+
+    return (
+        <div className="page welcome">
+            <section className="hero">
+                <div className="hero-haze" aria-hidden="true">
+                    {hazeCovers.map((album, i) => (
+                        <span key={album.id} className={`hero-haze-blob blob-${i}`} style={{ backgroundImage: `url(${album.previewImage})` }} />
+                    ))}
+                </div>
+                <h1 className="hero-title">Upload it. Shape it. Let it drift.</h1>
+                <p className="hero-lede">
+                    SoundHaze is where you put your songs into albums, collect favorites into playlists,
+                    and press play on whatever you find.
+                </p>
+                <div className="hero-actions">
+                    <DemoUser className="btn btn-primary btn-lg">Try the demo</DemoUser>
+                    <Link to="/signup" className="btn btn-secondary btn-lg">Create an account</Link>
+                </div>
+                <p className="hero-note">
+                    The demo signs you in as a sample artist. No sign-up needed.{' '}
+                    <LoginFormModal className="link-btn">Already have an account? Log in</LoginFormModal>
+                </p>
+            </section>
+
+            {albums.length > 0 && (
+                <section className="section">
+                    <div className="section-head">
+                        <h2>Fresh albums</h2>
+                        <Link to="/albums">Browse all albums</Link>
+                    </div>
+                    <TileGrid
+                        items={albums.slice(0, 6)}
+                        getTo={(a) => `/albums/${a.id}`}
+                        getTitle={(a) => a.title}
+                        getImage={(a) => a.previewImage}
+                    />
+                </section>
+            )}
+        </div>
+    );
+};
+
+const Dashboard = ({ currentUser }) => {
     const albums = useSelector(state => state.session.albums);
     const songs = useSelector(state => state.session.songs);
     const playlists = useSelector(state => state.session.playlists);
     const dispatch = useDispatch();
+    usePageTitle('Home');
 
     useEffect(() => {
-        if (currentUser) {
-            dispatch(mySongs());
-        }
-    }, [currentUser]);
+        dispatch(mySongs());
+    }, [dispatch]);
 
-    return (currentUser ? (
-        <div className="homepage-wrapper">
-            <div className="homepage">
-                <div className="user-profile-infobox-actions">
-                    <div className="user-propic-wrapper">
-                        <img loading="lazy" decoding="async" className="user-profile-pic" src={currentUser.previewImage} alt="user pic" />
-                    </div>
-                    <div className="user-info-wrapper">
-                        <ul className="user-info-list">
-                            <li className="user-info-item">
-                                {currentUser.username}
-                            </li>
-                            <li className="user-info-item">
-                                {currentUser.email}
-                            </li>
-                            {currentUser.firstName && currentUser.lastName && (
-                                <>
-                                    <li className="user-info-item">
-                                        {currentUser.firstName}
-                                    </li>
-                                    <li className="user-info-item">
-                                        {currentUser.lastName}
-                                    </li>
-                                </>
-                            )}
-                        </ul>
-                    </div>
-                    <div className="create-buttons-wrapper">
-                        <CreateAlbumModal />
-                        <CreatePlaylistModal />
+    return (
+        <div className="page">
+            <header className="page-header home-header">
+                <div className="home-who">
+                    <Cover src={currentUser.previewImage} label={currentUser.username} size={160} className="home-avatar" />
+                    <div>
+                        <h1>Hi, {currentUser.username}</h1>
+                        {currentUser.firstName && currentUser.lastName && (
+                            <p className="lede">{currentUser.firstName} {currentUser.lastName}</p>
+                        )}
                     </div>
                 </div>
-                <div className="user-tiles-wrapper">
-                    <div className="user-tile-title">
-                        <h1>
-                            Playlists:
-                        </h1>
-                    </div>
-                    <div className="section-tiles">
-                        {playlists.map((playlist, ind) => (
-                            <div className="tile-wrapper" key={ind}>
-                                <img loading="lazy" decoding="async" className="tile-image" src={playlist.previewImage} alt="playlist cover" />
-                                <NavLink to={`/playlists/${playlist.id}`} className="tile-title">
-                                    {playlist.name.length < 10 ? playlist.name : `${playlist.name.slice(0, 7)}...`}
-                                </NavLink>
-                            </div>
-                        ))
-                        }
-                    </div>
+                <div className="row">
+                    <CreateAlbumModal />
+                    <CreatePlaylistModal />
                 </div>
-                <div className="user-tiles-wrapper">
-                    <div className="user-tile-title">
-                        <h1>
-                            Albums:
-                        </h1>
-                    </div>
-                    <div className="section-tiles">
-                        {albums.map((album, ind) => (
-                            <div className="tile-wrapper" key={ind}>
-                                <img loading="lazy" decoding="async" className="tile-image" src={album.previewImage} alt="album cover" />
-                                <NavLink to={`/albums/${album.id}`} className="tile-title">
-                                    {album.title.length < 10 ? album.title : `${album.title.slice(0, 7)}...`}
-                                </NavLink>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                <div className="user-songs-tiles-wrapper">
-                    <div className="user-tile-title">
-                        <h1>
-                            Songs:
-                        </h1>
-                    </div>
-                    <div className="section-tiles">
-                        {songs.map((song, ind) => (
-                            <div className="tile-wrapper"
-                                key={ind}>
-                                    <img loading="lazy" decoding="async" className="tile-image" src={song.previewImage} alt="song cover" />
-                                <NavLink to={`/albums/${song.albumId}`} className="tile-title">
-                                    {song.title.length < 10 ? song.title : `${song.title.slice(0, 7)}...`}
-                                </NavLink>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div >
-    ) :
-        (
-            <div className="welcome-page-wrapper">
-                <div className="welcome-page">
-                    <div className="welcome-text">
-                        <h2
-                            className="welcome-title">
-                            Get Started Today
-                        </h2>
-                        <p>Log in or signup for a free account </p>
-                        <p>to get the music started</p>
-                    </div>
-                </div>
-            </div>
-        ))
-}
+            </header>
 
+            <section className="section" aria-labelledby="home-albums">
+                <div className="section-head"><h2 id="home-albums">Your albums</h2></div>
+                <TileGrid items={albums} getTo={(a) => `/albums/${a.id}`} getTitle={(a) => a.title} getImage={(a) => a.previewImage} />
+                {albums.length === 0 && <p className="muted">No albums yet.</p>}
+            </section>
+
+            <section className="section" aria-labelledby="home-playlists">
+                <div className="section-head"><h2 id="home-playlists">Your playlists</h2></div>
+                <TileGrid items={playlists} getTo={(p) => `/playlists/${p.id}`} getTitle={(p) => p.name} getImage={(p) => p.previewImage} />
+                {playlists.length === 0 && <p className="muted">No playlists yet.</p>}
+            </section>
+
+            <section className="section" aria-labelledby="home-songs">
+                <div className="section-head"><h2 id="home-songs">Your songs</h2></div>
+                <TileGrid items={songs} getTo={(s) => `/songs/${s.id}`} getTitle={(s) => s.title} getImage={(s) => s.previewImage} />
+                {songs.length === 0 && <p className="muted">No songs yet.</p>}
+            </section>
+        </div>
+    );
+};
+
+const HomePage = () => {
+    const currentUser = useSelector(state => state.session.user);
+    return currentUser ? <Dashboard currentUser={currentUser} /> : <Welcome />;
+};
 
 export default HomePage

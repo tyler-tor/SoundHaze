@@ -1,7 +1,6 @@
 import React, {useState} from 'react';
 import { Modal } from '../../context/Modal';
 import AddSong from './AddSong';
-import './Playlists.css'
 
 function AddSongModal({songId}) {
   const [showModal, setShowModal] = useState(false);
@@ -12,7 +11,7 @@ function AddSongModal({songId}) {
   })
   return (
     <div>
-      <button onClick={handleClick} className='add-song-playlist-btn'>+ to Playlist</button>
+      <button onClick={handleClick} className="btn btn-ghost btn-sm">+ to Playlist</button>
       {showModal && (
         <Modal onClose={() => setShowModal(false)}>
           <AddSong songId={songId} setShowModal={setShowModal} />

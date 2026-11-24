@@ -1,48 +1,51 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { Link } from 'react-router-dom';
 import AudioPlayer from 'react-h5-audio-player';
 import { playNext, playPrevious } from '../../store/player';
+import { Cover } from '../common';
 import './Player.css';
 
+// The player bar is always on screen, fixed to the bottom of the window.
+// With nothing chosen yet it says so instead of showing dead controls.
 function Player() {
   const dispatch = useDispatch();
   const song = useSelector((state) => state.player.song);
   const queue = useSelector((state) => state.player.queue);
-  const index = useSelector((state) => state.player.index);
-
-  const header = song && (
-    <div className='now-playing'>
-      <img
-        className='now-playing-cover'
-        src={song.previewImage}
-        alt=''
-        width='40'
-        height='40'
-        decoding='async'
-      />
-      <div className='now-playing-text'>
-        <strong className='now-playing-title'>{song.title}</strong>
-        {song.artistName && <span className='now-playing-artist'>{song.artistName}</span>}
-      </div>
-    </div>
-  );
 
   return (
-    <div className='media-player'>
-      <AudioPlayer
-        src={song?.url}
-        header={header}
-        volume={0.5}
-        preload='metadata'
-        autoPlay={false}
-        autoPlayAfterSrcChange={true}
-        showSkipControls={queue.length > 1}
-        showJumpControls={false}
-        onClickNext={() => dispatch(playNext())}
-        onClickPrevious={() => dispatch(playPrevious())}
-        onEnded={() => dispatch(playNext())}
-      />
-    </div>
+    <section className='media-player' aria-label='Music player'>
+      <div className='media-player-inner'>
+        <div className='now-playing'>
+          {song ? (
+            <>
+              <Cover src={song.previewImage} label={song.title} size={112} className='now-playing-cover' />
+              <div className='now-playing-text'>
+                <Link to={`/songs/${song.id}`} className='now-playing-title'>{song.title}</Link>
+                {song.artistName && <span className='now-playing-artist'>{song.artistName}</span>}
+              </div>
+            </>
+          ) : (
+            <p className='now-playing-empty'>Pick a song to start listening.</p>
+          )}
+        </div>
+        <AudioPlayer
+          className={song ? '' : 'is-idle'}
+          src={song?.url}
+          volume={0.5}
+          preload='metadata'
+          autoPlay={false}
+          autoPlayAfterSrcChange={true}
+          layout='horizontal-reverse'
+          showSkipControls={queue.length > 1}
+          showJumpControls={false}
+          customAdditionalControls={[]}
+          onClickNext={() => dispatch(playNext())}
+          onClickPrevious={() => dispatch(playPrevious())}
+          onEnded={() => dispatch(playNext())}
+        />
+      </div>
+    </section>
   )
 }
 

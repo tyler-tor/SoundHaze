@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Modal } from '../../context/Modal';
 import CreateSong from './CreateSong';
 
-const CreateSongModal = ({album, userId}) => {
+const CreateSongModal = ({album, userId, className = 'btn btn-primary'}) => {
     const [showModal, setShowModal] = useState(false);
 
     const handleClick = (e) => {
@@ -18,8 +18,8 @@ const CreateSongModal = ({album, userId}) => {
 
     return (
         <>
-            <button onClick={handleClick}
-            className="create-song-btn">Create Song</button>
+            <button type="button" onClick={handleClick}
+            className={className}>Create Song</button>
             {showModal && (
                 <Modal onClose={() => setShowModal(false)}>
                     <CreateSong albumId={album ? album.id : ''}

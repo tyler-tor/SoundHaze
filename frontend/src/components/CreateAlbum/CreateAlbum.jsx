@@ -3,7 +3,6 @@ import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { createAlbum } from "../../store/albums";
 import ImageComponent from "../ImageComponent";
-import './createalbum.css';
 import { getErrorMessages } from "../../store/csrf";
 
 
@@ -35,19 +34,19 @@ const CreateAlbum = ({ setShowModal }) => {
     };
 
     return (
-        <div className="create-album-container">
-            <div className="naf-item">
+        <div className="form modal-stack">
+            <div className="upload-slot">
                 <ImageComponent setUrl={setUrl} />
             </div>
             <form
                 onSubmit={handleSubmit}
-                className="create-album-form">
-                <ul>
+                className="form">
+                <ul className="error-list" role="alert">
                     {errors.map((error, idx) => (
                         <li key={idx}>{error}</li>
                     ))}
                 </ul>
-                <label>
+                <label className="field">
                     Title
                     <input
                         type="text"
@@ -56,7 +55,7 @@ const CreateAlbum = ({ setShowModal }) => {
                         required
                     />
                 </label>
-                <label>
+                <label className="field">
                     Description
                     <input
                         type="text"
@@ -67,7 +66,7 @@ const CreateAlbum = ({ setShowModal }) => {
                 </label>
                 <button
                     type="submit"
-                    className="create-album-btn">
+                    className="btn btn-primary">
                     Add Album
                 </button>
             </form>

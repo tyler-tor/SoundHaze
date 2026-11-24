@@ -3,7 +3,6 @@ import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { createPlaylist } from '../../store/playlists';
 import ImageComponent from '../ImageComponent';
-import './CreatePlaylist.css';
 import { getErrorMessages } from "../../store/csrf";
 
 function CreatePlaylist({ setShowModal }) {
@@ -31,19 +30,19 @@ function CreatePlaylist({ setShowModal }) {
       })
   }
   return (
-    <div className='create-playlist-container'>
-      <div className="npf-item">
+    <div className="form modal-stack">
+      <div className="upload-slot">
         <ImageComponent setUrl={setUrl} />
       </div>
       <form
         onSubmit={handleSubmit}
-        className='create-playlist-form'>
-        <ul>
+        className="form">
+        <ul className="error-list" role="alert">
           {errors.map((error, idx) => (
             <li key={idx}>{error}</li>
           ))}
         </ul>
-        <label>
+        <label className="field">
           Name
           <input
             type='text'
@@ -53,7 +52,7 @@ function CreatePlaylist({ setShowModal }) {
             required />
         </label>
         <button type='submit'
-        className='create-playlist-btn'>Create Playlist</button>
+        className="btn btn-primary">Create Playlist</button>
       </form>
     </div>
   )

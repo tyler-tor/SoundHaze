@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { csrfFetch, getErrorMessages } from '../../store/csrf';
-import './ImageComponent.css';
 
 function ImageComponent({ setUrl }) {
     const [image, setImage] = useState(null);
@@ -45,9 +44,12 @@ function ImageComponent({ setUrl }) {
 
     return (
         <div className='upload-image-wrapper'>
-            <form onSubmit={handleSubmit}>
-                <input type="file" onChange={updateImage} />
-                <button type="submit">Upload</button>
+            <form onSubmit={handleSubmit} className='upload-form'>
+                <label className='field'>
+                    Cover image
+                    <input type="file" accept="image/jpeg,image/png,image/webp" onChange={updateImage} />
+                </label>
+                <button type="submit" className='btn btn-secondary btn-sm'>Upload</button>
             {imageLoading && <p>Uploading...</p>}
             <ul className='error-list' role='alert'>
                 {errors.map((error, idx) => (
@@ -55,7 +57,7 @@ function ImageComponent({ setUrl }) {
                 ))}
             </ul>
             </form>
-            {uploadedImage && <img src={prevImageUrl} className='prev-image' />}
+            {uploadedImage && <img src={prevImageUrl} className='cover prev-image' alt='Preview of the uploaded cover' width='120' height='120' />}
         </div>
     )
 }

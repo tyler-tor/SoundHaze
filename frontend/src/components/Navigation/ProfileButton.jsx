@@ -1,29 +1,37 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import * as sessionActions from '../../store/session';
+import { Cover } from '../common';
 import './Navigation.css';
 
 const ProfileButton = ({ user }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const [showMenu, setShowMenu] = useState(false);
+    const wrapperRef = useRef(null);
+    const buttonRef = useRef(null);
 
-    const openMenu = (e) => {
-        if (showMenu) return;
-        setShowMenu(true);
-    };
-
+    // Close on a click outside the menu or on Escape (then focus goes back to the button).
     useEffect(() => {
         if (!showMenu) return;
 
-        const closeMenu = () => {
-            setShowMenu(false)
-        }
+        const onPointerDown = (e) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setShowMenu(false);
+        };
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setShowMenu(false);
+                buttonRef.current?.focus();
+            }
+        };
 
-        document.addEventListener('click', closeMenu)
-
-        return () => document.removeEventListener('click', closeMenu);
+        document.addEventListener('mousedown', onPointerDown);
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', onPointerDown);
+            document.removeEventListener('keydown', onKeyDown);
+        };
     }, [showMenu]);
 
     const logout = (e) => {
@@ -34,26 +42,26 @@ const ProfileButton = ({ user }) => {
     };
 
     return (
-        <>
-            <button onClick={openMenu}
-            className='profile-image-btn'
+        <div className='profile-menu' ref={wrapperRef}>
+            <button
+                ref={buttonRef}
+                type='button'
+                onClick={() => setShowMenu((open) => !open)}
+                className='profile-image-btn'
+                aria-expanded={showMenu}
+                aria-haspopup='true'
+                aria-label={`Account menu for ${user.username}`}
             >
-                <img src={user.previewImage} className='profile-image' />
+                <Cover src={user.previewImage} label={user.username} size={68} />
+                <span className='profile-name'>{user.username}</span>
             </button>
             {showMenu && (
-                <ul className='profile-dropdown'>
-                    <li
-                    className='profile-username'>{user.username}</li>
-                    <li>
-                        {user.username}
-                    </li>
-                    <li>
-                        <button onClick={logout} className='logout-btn'>Log Out</button>
-                    </li>
-                </ul>)}
-        </>
-
-
+                <div className='profile-dropdown'>
+                    <p className='profile-username'>Signed in as {user.username}</p>
+                    <button type='button' onClick={logout} className='menu-btn'>Log out</button>
+                </div>
+            )}
+        </div>
     )
 }
 

@@ -9,13 +9,14 @@ import DeleteSong from "./DeleteSong";
 import CreateSongModal from "../CreateSong/CreateSongModal";
 import UpdateSongModal from "../UpdateSong/UpdateSongModal";
 import AddSongModal from '../Playlists/AddSongModal';
-import './songs.css'
+import { Cover, usePageTitle } from "../common";
+import '../../styles/pages.css';
 
 const Songs = () => {
     const songs = Object.values(useSelector(state => state.songs)).reverse();
-    const albums = useSelector(state => state.albums);
     const user = useSelector(state => state.session.user);
     const dispatch = useDispatch();
+    usePageTitle('Songs');
 
     useEffect(() => {
         dispatch(getSongs());
@@ -29,65 +30,46 @@ const Songs = () => {
         [dispatch]
     );
 
-    const checkValidation = (song) => {
-        // if (user.id === song.userId) {
-            return (
-                <div className='ind-song-btns'>
-                    <AddSongModal
-                        songId={song.id}
-                    />
-                    {(user.id === song.userId) && (
-                        <>
-                            <DeleteSong
-                                song={song}
-                                userId={user.id}
-                            />
-                            <UpdateSongModal
-                                song={song}
-                                userId={user.id} />
-                        </>
-                    )}
+    return (
+        <div className="page">
+            <div className="page-header">
+                <div>
+                    <h1>Songs</h1>
+                    <p className="lede">Everything uploaded to SoundHaze, newest first.</p>
                 </div>
-            )
-        // }
-    }
-
-    return songs && albums && (
-        <div
-            className="cs-div">
-            <div className='entire-songs-container'>
                 {user && <CreateSongModal />}
-                {songs && (songs.map(song => {
-                    return (
-                        <div
-                            className="song-container"
-                            key={song.id}>
-                            <div className="ind-song-info">
-                                <img loading="lazy" decoding="async" src={song.previewImage}
-                                    className='song-img'>
-                                </img>
-                                <NavLink to={`/albums/${song.albumId}`} className='song-titles'>
-
-                                    {song.title}
-                                    <p
-                                        className="song-description">
-                                        -
-                                        {song.description}
-                                    </p>
-                                </NavLink>
-                            </div>
-                            <div className="ind-song-actions">
-                                {user && checkValidation(song)}
-                                <HiPlay className="play-btn"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        playSongBtn(song, songs);
-                                    }}
-                                />
-                            </div>
+            </div>
+            <div className="grid">
+                {songs.map(song => (
+                    <article className="tile" key={song.id}>
+                        <div className="tile-cover">
+                            <Cover src={song.previewImage} label={song.title} />
+                            <HiPlay className="play-btn"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    playSongBtn(song, songs);
+                                }}
+                            />
                         </div>
-                    )
-                }))}
+                        <div>
+                            <NavLink to={`/songs/${song.id}`} className="tile-title" title={song.title}>
+                                {song.title}
+                            </NavLink>
+                            <p className="tile-sub">{song.description}</p>
+                        </div>
+                        {user && (
+                            <div className='tile-actions'>
+                                <AddSongModal songId={song.id} />
+                                {(user.id === song.userId) && (
+                                    <>
+                                        <UpdateSongModal song={song} userId={user.id} />
+                                        <DeleteSong song={song} userId={user.id} />
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </article>
+                ))}
             </div>
         </div>
     )

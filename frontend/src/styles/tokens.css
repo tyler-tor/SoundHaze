@@ -1,0 +1,113 @@
+/* SoundHaze design tokens (S35).
+   Everything visual comes from these variables: change a value here and the
+   whole app follows. Contrast ratios (WCAG) are noted where they matter.
+
+   Theme: "dusk". A blue-plum night, one rose accent (--haze), text in a
+   slightly violet white. The signature idea is *haze*: covers are blurred
+   into soft mist behind headers and the player. */
+
+@import '@fontsource-variable/fraunces/opsz.css';
+@import '@fontsource-variable/hanken-grotesk/index.css';
+
+:root {
+  color-scheme: dark;
+
+  /* ---- Palette (raw values; use the semantic names below in CSS) ---- */
+  --night-950: #0e0c15;
+  --night-900: #12101a;   /* page background */
+  --dusk-800: #1d1a29;    /* cards, bars */
+  --dusk-700: #272336;    /* raised: hover, inputs, menus */
+  --dusk-600: #363148;    /* dividers */
+  --dusk-500: #6b6482;    /* input borders (3:1 against dusk-800) */
+  --mist-100: #f4f0fa;    /* main text */
+  --mist-400: #b3abc4;    /* secondary text */
+  --haze-400: #ff7aa2;    /* THE accent */
+  --haze-300: #ff9dbb;    /* accent on hover */
+  --haze-600: #c9446f;    /* accent, pressed */
+  --violet-glow: #6c4bd6; /* only used as soft background mist */
+
+  /* ---- Semantic colors ---- */
+  --bg: var(--night-900);
+  --bg-sunk: var(--night-950);
+  --surface: var(--dusk-800);
+  --surface-raised: var(--dusk-700);
+  --border: var(--dusk-600);
+  --border-strong: var(--dusk-500);
+  --text: var(--mist-100);          /* 16.8:1 on --bg */
+  --text-muted: var(--mist-400);    /* 8.6:1 on --bg, 6.9:1 on --surface-raised */
+  --accent: var(--haze-400);        /* 7.7:1 on --bg */
+  --accent-hover: var(--haze-300);
+  --accent-pressed: var(--haze-600);
+  --on-accent: var(--night-900);    /* dark text on the rose: 7.7:1 */
+  --danger: #ff9aa2;                /* 9.3:1 on --bg */
+  --danger-bg: #3a1c27;
+  --success: #7ee0b0;
+  --success-bg: #14301f;
+  --focus: #ffffff;                 /* focus ring, always visible on dark */
+
+  /* ---- Typography ---- */
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-body: 'Hanken Grotesk Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Type scale (ratio about 1.25, base 16px) */
+  --text-xs: 0.8125rem;   /* 13 */
+  --text-sm: 0.875rem;    /* 14 */
+  --text-base: 1rem;      /* 16 */
+  --text-lg: 1.125rem;    /* 18 */
+  --text-xl: 1.375rem;    /* 22 */
+  --text-2xl: 1.75rem;    /* 28 */
+  --text-3xl: 2.25rem;    /* 36 */
+  --text-4xl: 3rem;       /* 48 */
+  --text-display: clamp(2.5rem, 7vw, 4.75rem);
+
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-body: 1.55;
+
+  /* ---- Spacing (4px grid) ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+
+  /* ---- Radius: big for covers and sheets, small for controls ---- */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
+
+  /* ---- Elevation ---- */
+  --shadow-cover: 0 10px 30px -10px rgb(0 0 0 / 0.6);
+  --shadow-sheet: 0 30px 80px -20px rgb(0 0 0 / 0.75);
+
+  /* ---- Layout ---- */
+  --page-max: 1200px;
+  --page-pad: clamp(1rem, 4vw, 2.5rem);
+  --nav-height: 64px;
+  --player-height: 88px;
+  --tabbar-height: 0px;      /* becomes 60px on phones (S30) */
+
+  /* ---- Motion ---- */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+
+  /* ---- Layers ---- */
+  --z-nav: 20;
+  --z-player: 30;
+  --z-modal: 50;
+  --z-toast: 60;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+  }
+}

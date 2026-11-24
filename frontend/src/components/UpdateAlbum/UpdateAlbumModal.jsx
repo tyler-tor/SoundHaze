@@ -17,7 +17,7 @@ const UpdateAlbumModal = ({album, userId}) => {
     return (
         <>
             <button onClick={handleClick}
-            className="album-btns">Update Album</button>
+            className="btn btn-ghost btn-sm">Update Album</button>
             {showModal && (
                 <Modal onClose={() => setShowModal(false)}>
                     <UpdateAlbum album={album}

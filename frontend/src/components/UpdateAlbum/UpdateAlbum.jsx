@@ -2,7 +2,6 @@ import React, { useState} from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { updateAlbum } from "../../store/albums";
-import './updatealbum.css';
 import { getErrorMessages } from "../../store/csrf";
 
 const UpdateAlbum = ({ album, setShowModal }) => {
@@ -36,13 +35,13 @@ const UpdateAlbum = ({ album, setShowModal }) => {
     return (
         <form
             onSubmit={handleSubmit}
-            className="update-album-form">
-            <ul>
+            className="form">
+            <ul className="error-list" role="alert">
                 {errors.map((error, idx) => (
                     <li key={idx}>{error}</li>
                 ))}
             </ul>
-            <label>
+            <label className="field">
                 Title
                 <input
                     type="text"
@@ -51,7 +50,7 @@ const UpdateAlbum = ({ album, setShowModal }) => {
                     required
                 />
             </label>
-            <label>
+            <label className="field">
                 Description
                 <input
                     type="text"
@@ -60,7 +59,7 @@ const UpdateAlbum = ({ album, setShowModal }) => {
                     required
                 />
             </label>
-            {/* <label>
+            {/* <label className="field">
                 Image Url
                 <input
                     type="text"
@@ -71,7 +70,7 @@ const UpdateAlbum = ({ album, setShowModal }) => {
             </label> */}
             <button
                 type="submit"
-                className="update-album-btn">
+                className="btn btn-primary">
                 Update Album
             </button>
         </form>

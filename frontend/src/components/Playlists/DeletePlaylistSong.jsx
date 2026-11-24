@@ -3,7 +3,6 @@ import { useDispatch } from 'react-redux';
 import { removeSongFromPlaylist } from '../../store/playlistSongs';
 import { showPlaylist } from '../../store/playlists';
 import { getErrorMessages } from '../../store/csrf';
-import './Playlists.css';
 
 function DeletePlaylistSong({ songId, playlistId, setShowModal }) {
     const dispatch = useDispatch();
@@ -32,7 +31,7 @@ function DeletePlaylistSong({ songId, playlistId, setShowModal }) {
             </ul>
             <button
                 type="submit"
-                className="remove-song-btn"
+                className="btn btn-danger"
                 onClick={handleSubmit}>
                 Remove
             </button>

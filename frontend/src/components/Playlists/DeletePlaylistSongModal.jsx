@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Modal } from '../../context/Modal';
 import DeletePlaylistSong from './DeletePlaylistSong';
-import './Playlists.css';
 
 function DeletePlaylistSongModal({ songId, playlistId }) {
     const [showModal, setShowModal] = useState(false);
@@ -14,7 +13,7 @@ function DeletePlaylistSongModal({ songId, playlistId }) {
     return (
         <div>
             <button onClick={handleClick}
-            className='remove-song-playlist-btn'>
+            className="btn btn-ghost btn-sm">
                 Remove from Playlist
             </button>
             {showModal && (

@@ -17,7 +17,7 @@ const UpdateSongModal = ({song, userId}) => {
     return (
         <>
             <button onClick={handleClick}
-            className="song-btns">Update Song</button>
+            className="btn btn-ghost btn-sm">Update Song</button>
             {showModal && (
                 <Modal onClose={() => setShowModal(false)}>
                     <UpdateSong song={song}

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { addSongToPlaylist } from '../../store/playlistSongs';
 import { getErrorMessages } from '../../store/csrf';
-import './Playlists.css'
 
 
 function AddSong({ songId, setShowModal }) {
@@ -36,13 +35,13 @@ function AddSong({ songId, setShowModal }) {
   return myPlaylists && (
     <form
     onSubmit={handleSubmit}
-    className='add-song-playlist-form'>
+    className="form">
       <ul className='error-list' role='alert'>
         {errors.map((error, idx) => (
           <li key={idx}>{error}</li>
         ))}
       </ul>
-      <label>
+      <label className="field">
         Playlists
         <select
         name='playlist'
@@ -59,7 +58,7 @@ function AddSong({ songId, setShowModal }) {
       </label>
       <button
       type='submit'
-      className='add-song-playlist-btn'>
+      className="btn btn-ghost btn-sm">
         Add to Playlist
       </button>
     </form>

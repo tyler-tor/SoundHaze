@@ -3,10 +3,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import { signUpUser } from '../../store/session';
 import { getErrorMessages } from '../../store/csrf';
+import { usePageTitle } from '../common';
 // import ImageComponent from '../ImageComponent';
-import './SignupForm.css'
 
 const SignupFormPage = () => {
+    usePageTitle('Sign up');
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -69,67 +70,87 @@ const SignupFormPage = () => {
     )
 
     return (
-        <section
-        className='signup-section'>
-            <ul>
-                {errors.map(err => {
-                    return (
-                        <li
-                        key={err}>
-                            {err}
-                        </li>
-                    )
-                })}
-            </ul>
-            <form
-            onSubmit={handleSubmit}
-            className='signup-form-box'>
-                <input
-                type='text'
-                placeholder='Username'
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                />
-                <input
-                type='text'
-                placeholder='Email'
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                />
-                <input
-                type='password'
-                placeholder='Password'
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                />
-                <input
-                type='password'
-                placeholder='Confirm Password'
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                />
-                <input
-                type='text'
-                placeholder='Optional FirstName'
-                value={firstName}
-                onChange={e => setFirstName(e.target.value)}
-                />
-                <input
-                type='text'
-                placeholder='Optional LastName'
-                value={lastName}
-                onChange={e => setLastName(e.target.value)}
-                />
-                <input
-                type='file'
-                onChange={updateFile}
-                />
-                <button type='submit'
-                    disabled={validationErrors.length > 0}
-                >Signup</button>
-            </form>
-                {/* <ImageComponent setUrl={setUrl} /> */}
-        </section>
+        <div className='page auth-page'>
+            <section className='auth-card' aria-labelledby='signup-title'>
+                <h1 id='signup-title'>Create your account</h1>
+                <p className='lede muted'>Upload songs, make albums and build playlists.</p>
+                <ul className='error-list' role='alert'>
+                    {errors.map(err => (
+                        <li key={err}>{err}</li>
+                    ))}
+                </ul>
+                <form
+                onSubmit={handleSubmit}
+                className='form'>
+                    <label className='field'>
+                        Username
+                        <input
+                        type='text'
+                        autoComplete='username'
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                        />
+                    </label>
+                    <label className='field'>
+                        Email
+                        <input
+                        type='email'
+                        autoComplete='email'
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        />
+                    </label>
+                    <label className='field'>
+                        Password
+                        <input
+                        type='password'
+                        autoComplete='new-password'
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        />
+                    </label>
+                    <label className='field'>
+                        Confirm password
+                        <input
+                        type='password'
+                        autoComplete='new-password'
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                        />
+                    </label>
+                    <label className='field'>
+                        First name <span className='hint'>(optional)</span>
+                        <input
+                        type='text'
+                        autoComplete='given-name'
+                        value={firstName}
+                        onChange={e => setFirstName(e.target.value)}
+                        />
+                    </label>
+                    <label className='field'>
+                        Last name <span className='hint'>(optional)</span>
+                        <input
+                        type='text'
+                        autoComplete='family-name'
+                        value={lastName}
+                        onChange={e => setLastName(e.target.value)}
+                        />
+                    </label>
+                    <label className='field'>
+                        Profile picture <span className='hint'>(optional)</span>
+                        <input
+                        type='file'
+                        accept='image/jpeg,image/png,image/webp'
+                        onChange={updateFile}
+                        />
+                    </label>
+                    <button type='submit'
+                        className='btn btn-primary btn-lg'
+                        disabled={validationErrors.length > 0}
+                    >Sign up</button>
+                </form>
+            </section>
+        </div>
     )
 }
 

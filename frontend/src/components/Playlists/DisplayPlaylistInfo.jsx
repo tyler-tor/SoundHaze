@@ -1,20 +1,21 @@
-import { useParams } from "react-router-dom";
-import { useEffect, useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { Link, useParams } from "react-router-dom";
+import { useEffect, useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { showPlaylist } from "../../store/playlists";
-import UpdatePlaylistModal from "./UpdatePlaylistModal";
-import DeletePlaylist from "./DeletePlaylist";
 import { playSong } from "../../store/player";
 import { HiPlay } from "react-icons/hi";
-// import { removeSongFromPlaylist } from "../../store/playlistSongs";
+import UpdatePlaylistModal from "./UpdatePlaylistModal";
+import DeletePlaylist from "./DeletePlaylist";
 import DeletePlaylistSongModal from "./DeletePlaylistSongModal";
-import './DisplayPlaylistInfo.css';
+import { Cover, usePageTitle } from "../common";
+import '../../styles/pages.css';
 
-function DisplayPlaylistInfo() {
+const DisplayPlaylistInfo = () => {
     const { playlistId } = useParams();
     const playlist = useSelector(state => state.playlists.currentPlaylist[playlistId]);
     const user = useSelector(state => state.session.user);
     const dispatch = useDispatch();
+    usePageTitle(playlist?.name);
 
     useEffect(() => {
         dispatch(showPlaylist(playlistId));
@@ -27,71 +28,57 @@ function DisplayPlaylistInfo() {
         [dispatch, playlist]
     );
 
-    const checkValidation = (playlist) => {
-        if (user?.id === playlist.userId) {
-            return (
-                <div className="ind-song-actions">
-                    <UpdatePlaylistModal playlist={playlist} userId={user?.id} />
-                    <DeletePlaylist playlist={playlist} userId={user?.id} />
-                </div>
-            )
-        }
-    }
+    if (!playlist) return null;
 
-    return playlist && (
-        <div className="wrapper-div">
-            <div className="ind-playlist-wrapper">
-                <div className="ind-pi-wrapper">
-                    <div className="pi-pic-wrapper">
-                        <img loading="lazy" decoding="async" src={playlist.previewImage}
-                        alt={playlist.name} className='pi-pic' />
-                    </div>
-                    <div className="pi-detail-btns">
-                        <h1 className='ind-playlist-title'>
-                            {playlist.name}
-                        </h1>
-                        <div className="ind-pi-list">
-                            <div className="ind-pi-item">
-                                <img className="ind-pi-pro-pic"
-                                src={playlist.User.previewImage} alt={playlist.User.username} />
-                            </div>
-                            <strong className="ind-pi-item">
-                                {playlist.User.username}
-                            </strong>
+    return (
+        <div className="page">
+            <header className="detail-header">
+                <div className="haze" aria-hidden="true" style={{ backgroundImage: `url(${playlist.previewImage})` }} />
+                <div className="detail-cover">
+                    <Cover src={playlist.previewImage} alt={`Cover of ${playlist.name}`} label={playlist.name} size={600} eager />
+                </div>
+                <div className="detail-meta">
+                    <h1>{playlist.name}</h1>
+                    <p className="detail-artist">
+                        <Cover src={playlist.User.previewImage} label={playlist.User.username} size={68} className="avatar-xs" />
+                        <span>Playlist by <strong>{playlist.User.username}</strong></span>
+                    </p>
+                    {user?.id === playlist.userId && (
+                        <div className="row">
+                            <UpdatePlaylistModal playlist={playlist} userId={user.id} />
+                            <DeletePlaylist playlist={playlist} userId={user.id} />
                         </div>
-                        {checkValidation(playlist)}
-                    </div>
+                    )}
                 </div>
-                <div className="ind-playlist-songs-wrapper">
-                    {playlist.Songs.map(song => {
-                        return (
-                            <div className="ip-song-container" key={song.id}>
-                                <div className="ip-song-info">
-                                    <img loading="lazy" decoding="async" src={song.previewImage}
-                                    className='song-img' alt={playlist.name} />
-                                    <strong className="song-titles">
-                                        {song.title}
-                                        <p className="song-description">
-                                            - {song.description}
-                                        </p>
-                                    </strong>
-                                </div>
-                                <div className="ip-song-actions">
-                                    {(playlist.userId === user?.id) && (
-                                        <DeletePlaylistSongModal songId={song.id} playlistId={playlist.id} />
-                                    )}
-                                    <HiPlay className="play-btn"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        playSongBtn(song);
-                                    }}
-                                />
-                                </div>
+            </header>
+
+            <section className="section" aria-label="Songs in this playlist">
+                <ul className="tracklist">
+                    {playlist.Songs.map(song => (
+                        <li className="track" key={song.id}>
+                            <HiPlay className="play-btn"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    playSongBtn(song);
+                                }}
+                            />
+                            <div className="track-cover">
+                                <Cover src={song.previewImage} label={song.title} size={112} />
                             </div>
-                        )
-                    })}
-                </div>
-            </div>
+                            <div className="track-main">
+                                <Link to={`/songs/${song.id}`} className="track-title">{song.title}</Link>
+                                <p className="track-desc">{song.description}</p>
+                            </div>
+                            {playlist.userId === user?.id && (
+                                <div className="track-actions">
+                                    <DeletePlaylistSongModal songId={song.id} playlistId={playlist.id} />
+                                </div>
+                            )}
+                        </li>
+                    ))}
+                </ul>
+                {playlist.Songs.length === 0 && <p className="muted">No songs in this playlist yet. Use "Add to playlist" on any song.</p>}
+            </section>
         </div>
     )
 }

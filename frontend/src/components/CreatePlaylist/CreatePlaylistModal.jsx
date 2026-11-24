@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { Modal } from '../../context/Modal';
 import CreatePlaylist from './CreatePlaylist';
-import './CreatePlaylist.css'
 
 function CreatePlaylistModal() {
     const [showModal, setShowModal] = useState(false);
 
     return (
         <>
-            <button onClick={() => setShowModal(true)} className='create-playlist-btn'>Create Playlist</button>
+            <button onClick={() => setShowModal(true)} className="btn btn-primary">Create Playlist</button>
             {showModal && (
                 <Modal onClose={() => setShowModal(false)}>
                     <CreatePlaylist setShowModal={setShowModal} />

@@ -2,7 +2,6 @@ import React, { useState} from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { updateSong } from "../../store/songs";
-import './updatesong.css';
 import { getErrorMessages } from "../../store/csrf";
 
 const UpdateSong = ({ song, setShowModal }) => {
@@ -38,13 +37,13 @@ const UpdateSong = ({ song, setShowModal }) => {
     return (
         <form
             onSubmit={handleSubmit}
-            className="update-song-form">
-            <ul>
+            className="form">
+            <ul className="error-list" role="alert">
                 {errors.map((error, idx) => (
                     <li key={idx}>{error}</li>
                 ))}
             </ul>
-            <label>
+            <label className="field">
                 Title
                 <input
                     type="text"
@@ -53,7 +52,7 @@ const UpdateSong = ({ song, setShowModal }) => {
                     required
                 />
             </label>
-            <label>
+            <label className="field">
                 Description
                 <input
                     type="text"
@@ -62,7 +61,7 @@ const UpdateSong = ({ song, setShowModal }) => {
                     required
                 />
             </label>
-            <label>
+            <label className="field">
                 Url
                 <input
                     type="text"
@@ -71,7 +70,7 @@ const UpdateSong = ({ song, setShowModal }) => {
                     required
                 />
             </label>
-            <label>
+            <label className="field">
                 Image Url
                 <input
                     type="text"
@@ -82,7 +81,7 @@ const UpdateSong = ({ song, setShowModal }) => {
             </label>
             <button
                 type="submit"
-                className="update-song-btn">
+                className="btn btn-primary">
                 Update Song
             </button>
         </form>

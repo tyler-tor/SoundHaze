@@ -29,7 +29,7 @@ const DeleteAlbum = ({album, userId}) => {
     return (
         <button
         onClick={handleClick}
-        className="album-btns">
+        className="btn btn-ghost btn-sm">
             Delete Album
         </button>
     )

@@ -5,7 +5,8 @@ import { getErrorMessages } from '../../store/csrf';
 // Demo account (seeded by backend/db/seed-data.js).
 const DEMO_CREDENTIALS = { credential: 'Demo-lition', password: 'password' };
 
-const DemoUser = () => {
+// className lets each page style the button (nav bar, welcome page, signup page).
+const DemoUser = ({ className = 'btn btn-primary', children = 'Try the demo' }) => {
     const dispatch = useDispatch();
 
     const handleClick = async (e) => {
@@ -19,9 +20,10 @@ const DemoUser = () => {
 
     return (
         <button
-        className='demo-user-btn'
+        type='button'
+        className={className}
         onClick={handleClick}>
-            Demo
+            {children}
         </button>
     )
 }

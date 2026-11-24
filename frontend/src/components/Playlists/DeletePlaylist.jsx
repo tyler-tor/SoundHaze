@@ -26,7 +26,7 @@ function DeletePlaylist({ playlist, userId }) {
     return (
         <button
         onClick={handleClick}
-        className='playlist-btns'>
+        className="btn btn-ghost btn-sm">
             Delete Playlist
         </button>
     )

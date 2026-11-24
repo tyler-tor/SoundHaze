@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import * as sessionActions from "../../store/session";
 import { useDispatch } from "react-redux";
 import { getErrorMessages } from "../../store/csrf";
-import './loginform.css';
 
 
 function LoginForm() {
@@ -23,14 +22,13 @@ function LoginForm() {
 
     return (
       <form onSubmit={handleSubmit}
-      className='loginform-modal-container'>
-        <ul>
+      className="form">
+        <ul className="error-list" role="alert">
           {errors.map((error, idx) => (
             <li key={idx}>{error}</li>
           ))}
         </ul>
-        <label
-        className="user-email-input">
+        <label className="field">
           Username or Email
           <input
             type="text"
@@ -39,8 +37,7 @@ function LoginForm() {
             required
           />
         </label>
-        <label
-        className="password-input">
+        <label className="field">
           Password
           <input
             type="password"
@@ -49,7 +46,7 @@ function LoginForm() {
             required
           />
         </label>
-        <button type="submit" className="login-btn">Log In</button>
+        <button type="submit" className="btn btn-primary">Log In</button>
       </form>
     );
   }

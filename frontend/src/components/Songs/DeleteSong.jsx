@@ -23,7 +23,7 @@ const DeleteSong = ({song, userId}) => {
     return (
         <button
         onClick={handleClick}
-        className="song-btns">
+        className="btn btn-ghost btn-sm">
             Delete Song
         </button>
     )
